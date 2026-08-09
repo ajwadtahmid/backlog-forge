@@ -627,7 +627,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   ) {
     final tt = Theme.of(context).textTheme;
     // TODO: use isMobile to size the slider thumb or change number of columns
-    // (currently unused)
+    // ignore: unused_local_variable
     final isMobile = context.isMobileOS;
 
     return Card(
