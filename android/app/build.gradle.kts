@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.ajwadtahmid.backlogforge"
-    compileSdk = 35
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

@@ -5,7 +5,7 @@ publish_to: "none"
 version: 1.0.0+5
 
 environment:
-  sdk: ^3.11.4
+  sdk: ^3.12.2
 
 dependencies:
   flutter:
@@ -23,7 +23,7 @@ dependencies:
   path: ^1.9.0
   path_provider: ^2.1.0
 
-  flutter_secure_storage: ^10.0.0
+  flutter_secure_storage: ^11.0.0
 
   # Compile-time environment variable injection from .env
   envied: ^1.3.5
@@ -50,7 +50,7 @@ dependencies:
   rxdart: ^0.28.0
 
   # Typography — Space Grotesk for display/headings
-  google_fonts: ^6.2.1
+  google_fonts: ^8.2.1
 
   # App version / build number read from pubspec at runtime
   package_info_plus: ^10.1.0

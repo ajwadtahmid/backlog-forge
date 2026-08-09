@@ -61,6 +61,10 @@ class _BacklogTabState extends ConsumerState<BacklogTab>
     final selected = filtered
         .where((g) => selectedIds.contains(g.id) && g.status == GameStatus.playing.name)
         .toList();
+    if (selected.isEmpty) {
+      showSnack('No playing games selected');
+      return;
+    }
     if (!await confirmBulk(selected.length, 'Remove from playing')) return;
     await ref.read(gameActionsProvider).bulkMoveToBacklog(selected);
     if (mounted) {
@@ -177,6 +181,23 @@ class _BacklogTabState extends ConsumerState<BacklogTab>
       bulkActionBar: (filtered) => BulkActionBar(
         selectedCount: selectedIds.length,
         onCancel: cancelSelection,
+        actions: [
+          BulkAction(
+            icon: Icons.check_circle_outline,
+            label: 'Mark complete',
+            onPressed: () => _bulkComplete(filtered),
+          ),
+          BulkAction(
+            icon: Icons.play_arrow_outlined,
+            label: 'Mark playing',
+            onPressed: () => _bulkMarkPlaying(filtered),
+          ),
+          BulkAction(
+            icon: Icons.undo,
+            label: 'Remove from playing',
+            onPressed: () => _bulkMarkNotPlaying(filtered),
+          ),
+        ],
       ),
     );
   }

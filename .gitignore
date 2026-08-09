@@ -2,6 +2,9 @@
 .env
 .env.json
 
+.claude/
+extra/
+
 # Generated envied file contains obfuscated secrets — rebuild with build_runner.
 lib/env.g.dart
 

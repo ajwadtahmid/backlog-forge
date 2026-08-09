@@ -566,16 +566,31 @@ class SelectableGameRow extends StatelessWidget {
   }
 }
 
+/// A single bulk-action button shown in [BulkActionBar].
+class BulkAction {
+  const BulkAction({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+}
+
 /// Action bar pinned to the bottom of the screen during multi-select mode.
 class BulkActionBar extends StatelessWidget {
   const BulkActionBar({
     super.key,
     required this.selectedCount,
     required this.onCancel,
+    this.actions = const [],
   });
 
   final int selectedCount;
   final VoidCallback onCancel;
+  final List<BulkAction> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -596,6 +611,13 @@ class BulkActionBar extends StatelessWidget {
                 '$selectedCount selected',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
+              const Spacer(),
+              for (final action in actions)
+                IconButton(
+                  icon: Icon(action.icon),
+                  tooltip: action.label,
+                  onPressed: action.onPressed,
+                ),
             ],
           ),
         ),

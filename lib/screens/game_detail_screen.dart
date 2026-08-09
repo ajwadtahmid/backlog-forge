@@ -55,19 +55,24 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   Future<void> _setStatus(Game game, GameStatus next) async {
     if (next == _status) return;
     setState(() => _status = next);
-    await _withSaving(() => ref.read(gameActionsProvider).setStatus(
-          game,
-          next,
-          preserveCompletedAt:
-              next == GameStatus.playing && game.completedAt != null,
-        ));
+    await _withSaving(
+      () => ref
+          .read(gameActionsProvider)
+          .setStatus(
+            game,
+            next,
+            preserveCompletedAt:
+                next == GameStatus.playing && game.completedAt != null,
+          ),
+    );
   }
 
   Future<void> _setPlayStyle(PlayStyle style) async {
     if (style == _playStyle) return;
     setState(() => _playStyle = style);
     await _withSaving(
-        () => ref.read(gameActionsProvider).setPlayStyle(widget.game, style));
+      () => ref.read(gameActionsProvider).setPlayStyle(widget.game, style),
+    );
   }
 
   Future<void> _showPlaytimeDialog(BuildContext context, Game game) async {
@@ -80,7 +85,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
     if (hours != null && mounted) {
       await _withSaving(
-          () => ref.read(gameActionsProvider).setPlaytime(game, hours));
+        () => ref.read(gameActionsProvider).setPlaytime(game, hours),
+      );
     }
   }
 
@@ -94,16 +100,24 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       ),
     );
     if (result != null && mounted) {
-      await _withSaving(() => ref.read(gameActionsProvider).setHltbHours(
-            game,
-            essential: result.essential,
-            extended: result.extended,
-            completionist: result.completionist,
-          ));
+      await _withSaving(
+        () => ref
+            .read(gameActionsProvider)
+            .setHltbHours(
+              game,
+              essential: result.essential,
+              extended: result.extended,
+              completionist: result.completionist,
+            ),
+      );
     }
   }
 
-  static String _finishByLabel(double target, double hoursPlayed, double budgetPerDay) {
+  static String _finishByLabel(
+    double target,
+    double hoursPlayed,
+    double budgetPerDay,
+  ) {
     final remaining = target - hoursPlayed;
     if (remaining <= 0) return '';
     final days = (remaining / budgetPerDay).ceil();
@@ -119,7 +133,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     final saved = await showNotesDialog(context, game.notes);
     if (saved != null && mounted) {
       await _withSaving(
-          () => ref.read(gameActionsProvider).setNotes(game, saved));
+        () => ref.read(gameActionsProvider).setNotes(game, saved),
+      );
     }
   }
 
@@ -132,8 +147,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       final steamId = auth.steamId;
       if (steamId == null || game.appId <= 0) return;
 
-      final playtimeMinutes =
-          await SteamService().getGamePlaytime(steamId, game.appId);
+      final playtimeMinutes = await SteamService().getGamePlaytime(
+        steamId,
+        game.appId,
+      );
 
       if (playtimeMinutes != null && mounted) {
         await ref
@@ -146,8 +163,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(
-              content: Text('Failed to sync playtime from Steam')),
+          const SnackBar(content: Text('Failed to sync playtime from Steam')),
         );
       }
     } finally {
@@ -164,9 +180,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
 
     final hoursPlayed = game.playtimeMinutes / 60.0;
     final target = _targetHours(game);
-    final progress =
-        target != null ? (hoursPlayed / target).clamp(0.0, 1.0) : null;
-    final hasHltb = game.essentialHours != null ||
+    final progress = target != null
+        ? (hoursPlayed / target).clamp(0.0, 1.0)
+        : null;
+    final hasHltb =
+        game.essentialHours != null ||
         game.extendedHours != null ||
         game.completionistHours != null;
     final colors = Theme.of(context).colorScheme;
@@ -308,7 +326,15 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               _divider(colors),
               _buildPlayStyleSection(game, colors),
               _divider(colors),
-              _buildProgressSection(context, game, hoursPlayed, target, progress, colors, dailyBudget),
+              _buildProgressSection(
+                context,
+                game,
+                hoursPlayed,
+                target,
+                progress,
+                colors,
+                dailyBudget,
+              ),
             ],
             _divider(colors),
             _buildRatingSection(context, game, colors),
@@ -321,7 +347,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   Widget _buildPlaytimeSection(
-      BuildContext context, Game game, double hoursPlayed, ColorScheme colors) {
+    BuildContext context,
+    Game game,
+    double hoursPlayed,
+    ColorScheme colors,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -337,7 +367,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               ),
             EditIconButton(
               tooltip: 'Edit Playtime',
-              onPressed: _saving ? null : () => _showPlaytimeDialog(context, game),
+              onPressed: _saving
+                  ? null
+                  : () => _showPlaytimeDialog(context, game),
             ),
           ],
         ),
@@ -346,10 +378,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           hoursPlayed < 1
               ? '${game.playtimeMinutes} minutes played'
               : '${hoursPlayed.toStringAsFixed(1)} hours played',
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         Padding(
           padding: const EdgeInsets.only(top: 4),
@@ -363,7 +394,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   Widget _buildTimeToBeatSection(
-      BuildContext context, Game game, bool hasHltb, ColorScheme colors) {
+    BuildContext context,
+    Game game,
+    bool hasHltb,
+    ColorScheme colors,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -401,7 +436,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 tooltip: 'Update Time to Beat',
                 onPressed: _saving
                     ? null
-                    : () => context.push('/library/game/${game.id}/hltb', extra: game),
+                    : () => context.push(
+                        '/library/game/${game.id}/hltb',
+                        extra: game,
+                      ),
               ),
             EditIconButton(
               tooltip: 'Edit Time to Beat',
@@ -461,17 +499,20 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         ToggleRow<GameStatus>(
           options: [
             ToggleOption(
-                value: GameStatus.backlog,
-                label: 'Backlog',
-                icon: Icons.inbox_outlined),
+              value: GameStatus.backlog,
+              label: 'Backlog',
+              icon: Icons.inbox_outlined,
+            ),
             ToggleOption(
-                value: GameStatus.playing,
-                label: 'Playing',
-                icon: Icons.play_circle_outline),
+              value: GameStatus.playing,
+              label: 'Playing',
+              icon: Icons.play_circle_outline,
+            ),
             ToggleOption(
-                value: GameStatus.completed,
-                label: 'Completed',
-                icon: Icons.check_circle_outline),
+              value: GameStatus.completed,
+              label: 'Completed',
+              icon: Icons.check_circle_outline,
+            ),
           ],
           selected: _status,
           onChanged: _saving ? null : (s) => _setStatus(game, s),
@@ -532,7 +573,9 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               value: progress,
               minHeight: 10,
               backgroundColor: colors.primary.withValues(alpha: 0.15),
-              valueColor: AlwaysStoppedAnimation(progressColor(progress, colors)),
+              valueColor: AlwaysStoppedAnimation(
+                progressColor(progress, colors),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -553,17 +596,20 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           ),
           if (dailyBudget > 0 && progress < 1.0) ...[
             const SizedBox(height: 6),
-            Builder(builder: (context) {
-              final label = _finishByLabel(target, hoursPlayed, dailyBudget);
-              if (label.isEmpty) return const SizedBox.shrink();
-              return Text(
-                label,
-                style: TextStyle(
+            Builder(
+              builder: (context) {
+                final label = _finishByLabel(target, hoursPlayed, dailyBudget);
+                if (label.isEmpty) return const SizedBox.shrink();
+                return Text(
+                  label,
+                  style: TextStyle(
                     fontSize: 12,
                     color: colors.primary,
-                    fontStyle: FontStyle.italic),
-              );
-            }),
+                    fontStyle: FontStyle.italic,
+                  ),
+                );
+              },
+            ),
           ],
         ] else
           Text(
@@ -575,8 +621,13 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   Widget _buildRatingSection(
-      BuildContext context, Game game, ColorScheme colors) {
+    BuildContext context,
+    Game game,
+    ColorScheme colors,
+  ) {
     final tt = Theme.of(context).textTheme;
+    // TODO: use isMobile to size the slider thumb or change number of columns
+    // (currently unused)
     final isMobile = context.isMobileOS;
 
     return Card(
@@ -587,14 +638,20 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.star_outline, size: 16, color: colors.onSurfaceVariant),
+                Icon(
+                  Icons.star_outline,
+                  size: 16,
+                  color: colors.onSurfaceVariant,
+                ),
                 const SizedBox(width: 8),
                 Expanded(child: Text('Rating', style: tt.titleSmall)),
                 Text(
                   game.rating != null ? '${game.rating}/10' : 'Not set',
                   style: tt.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: game.rating != null ? colors.primary : colors.onSurfaceVariant,
+                    color: game.rating != null
+                        ? colors.primary
+                        : colors.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -614,11 +671,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 onChanged: _saving
                     ? null
                     : (val) => _withSaving(
-                          () => ref.read(gameActionsProvider).setRating(
-                                game,
-                                val == 0 ? null : val.toInt(),
-                              ),
-                        ),
+                        () => ref
+                            .read(gameActionsProvider)
+                            .setRating(game, val == 0 ? null : val.toInt()),
+                      ),
               ),
             ),
           ],
@@ -652,11 +708,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   }
 
   static Widget _divider(ColorScheme colors) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Divider(
-          height: 1,
-          thickness: 0.4,
-          color: colors.outlineVariant.withValues(alpha: 0.7),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    child: Divider(
+      height: 1,
+      thickness: 0.4,
+      color: colors.outlineVariant.withValues(alpha: 0.7),
+    ),
+  );
 }
