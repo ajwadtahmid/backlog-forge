@@ -22,6 +22,16 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Create .env
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CLIENT_TOKEN: ${{ secrets.CLIENT_TOKEN }}
+        run: |
+          {
+            echo "BACKEND_URL=$BACKEND_URL"
+            echo "CLIENT_TOKEN=$CLIENT_TOKEN"
+          } > .env
+
       - name: Generate database code
         run: dart run build_runner build --delete-conflicting-outputs
 
@@ -49,6 +59,16 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Create .env
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CLIENT_TOKEN: ${{ secrets.CLIENT_TOKEN }}
+        run: |
+          {
+            echo "BACKEND_URL=$BACKEND_URL"
+            echo "CLIENT_TOKEN=$CLIENT_TOKEN"
+          } > .env
 
       - name: Generate database code
         run: dart run build_runner build --delete-conflicting-outputs
@@ -97,6 +117,14 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Create .env
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CLIENT_TOKEN: ${{ secrets.CLIENT_TOKEN }}
+        run: |
+          "BACKEND_URL=$env:BACKEND_URL" | Out-File -FilePath .env -Encoding utf8
+          "CLIENT_TOKEN=$env:CLIENT_TOKEN" | Out-File -FilePath .env -Append -Encoding utf8
 
       - name: Generate database code
         run: dart run build_runner build --delete-conflicting-outputs
@@ -164,6 +192,16 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Create .env
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CLIENT_TOKEN: ${{ secrets.CLIENT_TOKEN }}
+        run: |
+          {
+            echo "BACKEND_URL=$BACKEND_URL"
+            echo "CLIENT_TOKEN=$CLIENT_TOKEN"
+          } > .env
 
       - name: Generate database code
         run: dart run build_runner build --delete-conflicting-outputs
