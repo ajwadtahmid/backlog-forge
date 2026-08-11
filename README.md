@@ -85,7 +85,7 @@ Designed for PC gamers who own large Steam libraries and want a structured, low-
 
 | Backlog | Completed | Play Next | Stats |
 |---------|-----------|-----------|-------|
-| ![Backlog](assets/screenshots/desktop/Screenshot_1.png) | ![Completed](assets/screenshots/desktop/Screenshot_2.png) | ![Play Next](assets/screenshots/desktop/Screenshot_3.png) | ![Stats](assets/screenshots/desktop/Screenshot_4.png) |
+| ![Backlog](assets/screenshots/desktop/desktop_backlog.png) | ![Completed](assets/screenshots/desktop/desktop_completed.png) | ![Play Next](assets/screenshots/desktop/desktop_playnext.png) | ![Stats](assets/screenshots/desktop/desktop_stats.png) |
 
 ---
 
