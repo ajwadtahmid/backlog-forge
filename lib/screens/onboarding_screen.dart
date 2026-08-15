@@ -1,32 +1,106 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
+import '../services/api_config.dart';
 import '../services/app_logger.dart';
 import '../services/steam_auth_service.dart';
 
-Future<String?> _runSteamAuthFlow(WidgetRef ref) async {
+/// Steam's OpenID flow has to run in a browser. On mobile that browser must be
+/// embedded — handing users to the system browser is rejected under App Store
+/// guideline 4 — so we use an auth session (ASWebAuthenticationSession on iOS,
+/// Chrome Auth Tab on Android), which also dismisses itself on callback.
+///
+/// Desktop keeps the loopback flow: there is no auth-session equivalent there,
+/// and a local redirect server is reliable on a machine that isn't suspending
+/// backgrounded processes.
+bool get _isMobile => Platform.isIOS || Platform.isAndroid;
+
+void _fail(
+    WidgetRef ref, String stage, String message, Object e, StackTrace st) {
+  AppLogger.instance.error('Steam sign-in failed during $stage', e, st);
+  ref.read(authProvider.notifier).setError(message);
+}
+
+/// Verifies the OpenID response Steam produced, wherever it was captured.
+Future<String?> _verifySteamResponse(
+    WidgetRef ref, SteamAuthService svc, Uri redirect) async {
   try {
-    final svc = SteamAuthService();
-    final loginUrl = await svc.buildLoginUrl();
-    await launchUrl(loginUrl, mode: LaunchMode.externalApplication);
-    final redirect = await svc.awaitRedirect().timeout(
-      const Duration(minutes: 2),
+    final steamId = await svc.extractAndVerifySteamId(redirect);
+    if (steamId == null) {
+      AppLogger.instance.error(
+        'Steam response did not verify (has_claimed_id='
+        '${redirect.queryParameters.containsKey('openid.claimed_id')})',
+      );
+    }
+    return steamId;
+  } catch (e, st) {
+    _fail(ref, 'Steam verification', 'Could not verify sign-in with Steam.', e, st);
+    return null;
+  }
+}
+
+/// Mobile: Steam redirects to the backend, which bounces the OpenID params to
+/// the app's custom scheme. That ends the auth session and closes the browser
+/// automatically. No local server is involved, so the OS suspending a
+/// backgrounded app can't cause the redirect to be missed.
+Future<String?> _runAuthSessionFlow(WidgetRef ref, SteamAuthService svc) async {
+  final String callback;
+  try {
+    callback = await FlutterWebAuth2.authenticate(
+      url: svc.buildBackendLoginUrl(ApiConfig.backendUrl).toString(),
+      callbackUrlScheme: SteamAuthService.callbackScheme,
     );
-    return await svc.extractAndVerifySteamId(redirect);
+  } on PlatformException catch (e, st) {
+    // Dismissing the sheet is a deliberate back-out, not a failure.
+    if (e.code == 'CANCELED') return null;
+    _fail(ref, 'auth session', 'Could not open the Steam sign-in page.', e, st);
+    return null;
+  } catch (e, st) {
+    _fail(ref, 'auth session', 'Sign-in did not complete. Please try again.', e, st);
+    return null;
+  }
+  return _verifySteamResponse(ref, svc, Uri.parse(callback));
+}
+
+/// Desktop: Steam redirects to a short-lived loopback server owned by the app.
+/// Each stage reports separately so a failure names the step it happened in.
+Future<String?> _runLoopbackFlow(WidgetRef ref, SteamAuthService svc) async {
+  final Uri loginUrl;
+  try {
+    loginUrl = await svc.buildLoginUrl();
+  } catch (e, st) {
+    _fail(ref, 'loopback bind', 'Could not start the local redirect server.', e, st);
+    return null;
+  }
+
+  try {
+    await launchUrl(loginUrl, mode: LaunchMode.externalApplication);
+  } catch (e, st) {
+    _fail(ref, 'browser launch', 'Could not open the Steam sign-in page.', e, st);
+    return null;
+  }
+
+  final Uri redirect;
+  try {
+    redirect = await svc.awaitRedirect().timeout(const Duration(minutes: 2));
   } on TimeoutException {
     ref.read(authProvider.notifier).setError('Sign-in timed out — please try again.');
     return null;
-  } on SocketException {
-    ref.read(authProvider.notifier).setError('Could not start the local redirect server.');
-    return null;
   } catch (e, st) {
-    AppLogger.instance.error('Steam auth flow failed', e, st);
-    ref.read(authProvider.notifier).setError('Something went wrong. Please try again.');
+    _fail(ref, 'awaiting redirect', 'Sign-in did not complete. Please try again.', e, st);
     return null;
   }
+  return _verifySteamResponse(ref, svc, redirect);
+}
+
+Future<String?> _runSteamSignIn(WidgetRef ref) {
+  final svc = SteamAuthService();
+  return _isMobile ? _runAuthSessionFlow(ref, svc) : _runLoopbackFlow(ref, svc);
 }
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -41,7 +115,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _startSignIn() async {
     setState(() => _busy = true);
     try {
-      final steamId = await _runSteamAuthFlow(ref);
+      final steamId = await _runSteamSignIn(ref);
       if (steamId == null) {
         // _runSteamAuthFlow already called setError() with a specific message
         // in all error branches. Only fall back to the generic message when
@@ -270,7 +344,7 @@ class _SignInSheetState extends ConsumerState<SignInSheet> {
   Future<void> _startSignIn() async {
     setState(() => _busy = true);
     try {
-      final steamId = await _runSteamAuthFlow(ref);
+      final steamId = await _runSteamSignIn(ref);
       if (steamId == null) {
         if (mounted) Navigator.pop(context);
         return;

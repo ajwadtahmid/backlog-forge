@@ -188,6 +188,7 @@ jobs:
             libsecret-1-dev \
             libsqlite3-dev \
             libsqlite3-0 \
+            libwebkit2gtk-4.1-dev \
             zsync
 
       - name: Get dependencies

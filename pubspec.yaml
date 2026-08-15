@@ -2,7 +2,7 @@ name: backlogforge
 description: "Steam game backlog manager — track, prioritise, and conquer your backlog."
 publish_to: "none"
 
-version: 1.0.0+5
+version: 1.0.0+6
 
 environment:
   sdk: ^3.12.2
@@ -54,6 +54,7 @@ dependencies:
 
   # App version / build number read from pubspec at runtime
   package_info_plus: ^10.1.0
+  flutter_web_auth_2: ^5.1.0
 
 dev_dependencies:
   flutter_test:

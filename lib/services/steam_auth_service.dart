@@ -3,13 +3,45 @@ import 'package:http/http.dart' as http;
 
 class SteamAuthService {
   static const _steamLogin = 'https://steamcommunity.com/openid/login';
+  static const _openIdNs = 'http://specs.openid.net/auth/2.0';
+  static const _identifierSelect =
+      'http://specs.openid.net/auth/2.0/identifier_select';
+
+  /// Custom scheme the backend redirects to once Steam has responded. The
+  /// mobile auth session watches for it and closes the browser on sight.
+  static const callbackScheme = 'backlogforge';
 
   HttpServer? _server;
+
+  /// Login URL for the mobile flow, where Steam redirects to the backend
+  /// rather than a loopback server. The backend forwards the OpenID params on
+  /// to `[callbackScheme]://auth`, which ends the auth session.
+  ///
+  /// The hop exists because Steam requires an http(s) realm and rejects custom
+  /// schemes in `return_to`, so the app cannot be the redirect target itself.
+  Uri buildBackendLoginUrl(String backendUrl) {
+    final base = backendUrl.endsWith('/')
+        ? backendUrl.substring(0, backendUrl.length - 1)
+        : backendUrl;
+    return Uri.parse(_steamLogin).replace(
+      queryParameters: {
+        'openid.ns': _openIdNs,
+        'openid.mode': 'checkid_setup',
+        'openid.return_to': '$base/auth/steam/callback',
+        'openid.realm': base,
+        'openid.identity': _identifierSelect,
+        'openid.claimed_id': _identifierSelect,
+      },
+    );
+  }
 
   /// Binds to a free local port, then constructs the Steam OpenID 2.0 login URL.
   /// Uses port 0 so the OS picks an available port instead of failing on a busy fixed port.
   Future<Uri> buildLoginUrl() async {
-    _server = await HttpServer.bind('127.0.0.1', 0);
+    // Bind the InternetAddress directly rather than the string '127.0.0.1':
+    // the string form goes through an address lookup, which can fail with a
+    // SocketException on Android.
+    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final port = _server!.port;
     return Uri.parse(_steamLogin).replace(
       queryParameters: {
@@ -27,7 +59,6 @@ class SteamAuthService {
   /// Skips any browser prefetch / favicon requests until the real /auth arrives.
   Future<Uri> awaitRedirect() async {
     final server = _server!;
-    _server = null;
     try {
       await for (final request in server) {
         if (request.uri.path != '/auth') {
@@ -41,13 +72,14 @@ class SteamAuthService {
           ..write(
             '<html><body style="font-family:sans-serif;text-align:center;'
             'padding:40px"><h2>Signed in!</h2>'
-            '<p>You can close this tab.</p></body></html>',
+            '<p>Returning to BacklogForge…</p></body></html>',
           );
         await request.response.close();
         return redirectUri;
       }
       throw StateError('Sign-in server closed before receiving Steam redirect');
     } finally {
+      _server = null;
       await server.close(force: true);
     }
   }
