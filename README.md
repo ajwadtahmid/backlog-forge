@@ -9,16 +9,16 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ajwadtahmid/backlogforge/releases">
-    <img alt="Release" src="https://img.shields.io/github/v/release/ajwadtahmid/backlogforge?color=orange&label=release" />
+  <a href="https://github.com/ajwadtahmid/backlog-forge/releases">
+    <img alt="Release" src="https://img.shields.io/github/v/release/ajwadtahmid/backlog-forge?color=orange&label=release" />
   </a>
-  <a href="https://github.com/ajwadtahmid/backlogforge/releases">
-    <img alt="Downloads" src="https://img.shields.io/github/downloads/ajwadtahmid/backlogforge/total?color=blue" />
+  <a href="https://github.com/ajwadtahmid/backlog-forge/releases">
+    <img alt="Downloads" src="https://img.shields.io/github/downloads/ajwadtahmid/backlog-forge/total?color=blue" />
   </a>
   <a href="https://flutter.dev">
     <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.x-blue?logo=flutter&logoColor=white" />
   </a>
-  <a href="https://github.com/ajwadtahmid/backlogforge/blob/main/LICENSE">
+  <a href="https://github.com/ajwadtahmid/backlog-forge/blob/main/LICENSE">
     <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-green" />
   </a>
   <img alt="Android" src="https://img.shields.io/badge/Android-supported-brightgreen?logo=android&logoColor=white" />
@@ -30,7 +30,7 @@
 
 <div align="center">
 
-<a href="https://github.com/ajwadtahmid/backlogforge/releases">
+<a href="https://github.com/ajwadtahmid/backlog-forge/releases">
 <img src="assets/images/get-it-on-github.png" alt="Get it on GitHub" align="center" height="80" /></a>
 
 <a href="https://play.google.com/store/apps/details?id=com.ajwadtahmid.backlogforge">
@@ -130,8 +130,8 @@ Designed for PC gamers who own large Steam libraries and want a structured, low-
 
 ```bash
 # 1. Clone
-git clone https://github.com/ajwadtahmid/backlogforge.git
-cd backlogforge
+git clone https://github.com/ajwadtahmid/backlog-forge.git
+cd backlog-forge
 
 # 2. Install dependencies
 flutter pub get
@@ -195,8 +195,8 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 Have a question or found a bug? Let us know:
 
 - **Email**: [support@ajwadtahmid.com](mailto:support@ajwadtahmid.com)
-- **Bug reports & features**: [GitHub Issues](https://github.com/ajwadtahmid/backlogforge/issues)
-- **Ideas & discussions**: [GitHub Discussions](https://github.com/ajwadtahmid/backlogforge/discussions)
+- **Bug reports & features**: [GitHub Issues](https://github.com/ajwadtahmid/backlog-forge/issues)
+- **Ideas & discussions**: [GitHub Discussions](https://github.com/ajwadtahmid/backlog-forge/discussions)
 
 ---
 
