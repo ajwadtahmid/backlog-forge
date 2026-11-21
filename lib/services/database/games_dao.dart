@@ -62,26 +62,29 @@ class GamesDao extends DatabaseAccessor<AppDatabase> with _$GamesDaoMixin {
         .get();
   }
 
-  /// Persists HLTB lookup result for one game.
-  /// Pass [data] = null to stamp [hltbAttemptedAt] without writing hours
-  /// (records a failed/no-match attempt so the retry window applies).
-  Future<void> updateHltbData(int gameId, TimeToBeat? data) async {
-    final now = DateTime.now();
-    if (data != null) {
-      await (db.update(db.games)..where((t) => t.id.equals(gameId))).write(
-        GamesCompanion(
-          essentialHours: Value(data.essentialHours),
-          extendedHours: Value(data.extendedHours),
-          completionistHours: Value(data.completionistHours),
-          hltbName: Value(data.hltbName),
-          hltbAttemptedAt: Value(now),
-        ),
-      );
-    } else {
-      await (db.update(db.games)..where((t) => t.id.equals(gameId))).write(
-        GamesCompanion(hltbAttemptedAt: Value(now)),
-      );
-    }
+  /// Persists a successful HLTB match for one game and stamps
+  /// [Games.hltbAttemptedAt].
+  Future<void> updateHltbData(int gameId, TimeToBeat data) async {
+    await (db.update(db.games)..where((t) => t.id.equals(gameId))).write(
+      GamesCompanion(
+        essentialHours: Value(data.essentialHours),
+        extendedHours: Value(data.extendedHours),
+        completionistHours: Value(data.completionistHours),
+        hltbName: Value(data.hltbName),
+        hltbGameId: Value(data.hltbGameId),
+        hltbVerified: Value(data.hltbVerified),
+        hltbAttemptedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  /// Records a definitive "not on HLTB" answer so the retry window applies.
+  /// Do NOT call this for network or rate-limit failures — those should be
+  /// retried on the next sync.
+  Future<void> markHltbNoMatch(int gameId) async {
+    await (db.update(db.games)..where((t) => t.id.equals(gameId))).write(
+      GamesCompanion(hltbAttemptedAt: Value(DateTime.now())),
+    );
   }
 
   /// Re-derives the status for every non-overridden game based on current playtime
@@ -246,6 +249,7 @@ class GamesDao extends DatabaseAccessor<AppDatabase> with _$GamesDaoMixin {
         completionistHours: Value(timeToBeat?.completionistHours),
         hltbImageUrl: Value(artworkUrl),
         hltbName: Value(timeToBeat?.hltbName),
+        hltbGameId: Value(timeToBeat?.hltbGameId),
         manualOverride: const Value(true),
         addedAt: DateTime.now(),
       ),

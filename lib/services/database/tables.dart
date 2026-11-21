@@ -23,9 +23,14 @@ class Games extends Table {
   TextColumn get playStyle => text().nullable()();
   BoolColumn get manualOverride =>
       boolean().withDefault(const Constant(false))();
-  // Stamped every time a HLTB lookup is attempted (success or fail).
-  // Games attempted within kHltbRetryWindow are skipped on subsequent syncs.
+  // Stamped when a HLTB lookup gives a definitive answer (match or genuine
+  // no-match). NOT stamped on network/rate-limit failures, so those retry on
+  // the next sync. Games stamped within kHltbRetryWindow are skipped.
   DateTimeColumn get hltbAttemptedAt => dateTime().nullable()();
+  // HLTB game id of the matched entry; lets refreshes skip search.
+  IntColumn get hltbGameId => integer().nullable()();
+  // True when HLTB's Steam link (profile_steam) matched appId exactly.
+  BoolColumn get hltbVerified => boolean().withDefault(const Constant(false))();
   TextColumn get notes => text().nullable()();
   // Personal rating 1–10; null = not rated.
   IntColumn get rating => integer().nullable()();

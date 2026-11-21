@@ -1,0 +1,25 @@
+{
+  "pageProps": {
+    "game": {
+      "data": {
+        "game": [
+          {
+            "game_id": 7231,
+            "game_name": "Portal 2",
+            "game_alias": "",
+            "game_image": "Portal2cover.jpg",
+            "comp_main": 30886,
+            "comp_plus": 49560,
+            "comp_100": 82795,
+            "comp_all": 38322,
+            "comp_all_count": 8802,
+            "release_world": "2011-04-18",
+            "profile_steam": 620,
+            "profile_platform": "Linux, Mac, Nintendo Switch, PC, PlayStation 3, Xbox 360"
+          }
+        ]
+      }
+    }
+  },
+  "pageProps_note": "trimmed"
+}

@@ -1,0 +1,4 @@
+tags:
+  live:
+    # Hits the real howlongtobeat.com; also needs HLTB_LIVE=1.
+    skip: false

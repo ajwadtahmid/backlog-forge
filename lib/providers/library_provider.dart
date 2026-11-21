@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import '../services/database/app_database.dart';
@@ -9,6 +10,7 @@ import '../services/app_logger.dart';
 import '../models/steam_game.dart';
 import 'database_provider.dart';
 import 'auth_provider.dart';
+import 'hltb_provider.dart';
 
 enum SyncStatus { idle, syncing, error }
 
@@ -38,13 +40,16 @@ String _friendlySyncError(Object e) {
   }
   if (e is NotSignedInException) return 'You are not signed in.';
   if (e is ServerTimeoutException) {
-    return 'The server took too long to respond — it may be waking up. Please try again in a moment.';
+    return 'The server took too long to respond. Please try again in a moment.';
   }
   if (e is NetworkException) {
     return 'No internet connection. Please check your network.';
   }
+  if (e is HltbRateLimitedException) {
+    return 'HowLongToBeat is busy. Please wait a minute and try again.';
+  }
   if (e is HltbSearchException || e is HltbLookupException) {
-    return 'Could not reach the HLTB server. Please try again later.';
+    return 'Could not reach HowLongToBeat. Please try again later.';
   }
   return 'Sync failed. Please try again.';
 }
@@ -56,7 +61,6 @@ final syncStateProvider =
 /// missing HLTB data, then recalculates completion statuses.
 class SyncNotifier extends Notifier<SyncState> {
   final _steamService = SteamService();
-  final _hltbSync = HltbSyncService();
   Timer? _errorClearTimer;
 
   @override
@@ -74,10 +78,13 @@ class SyncNotifier extends Notifier<SyncState> {
       final db = ref.read(databaseProvider);
       final steamGames = await _steamService.getOwnedGames(steamId);
 
-      await _upsertSteamGames(db, steamGames, steamId);
+      await upsertSteamGames(db, steamGames, steamId);
 
       final allGames = await db.gamesDao.getAllGames(steamId);
-      final hltbResult = await _hltbSync.fetchAllTimeToBeat(
+      final hltbSync = HltbSyncService(
+        resolve: ref.read(hltbResolverProvider).resolve,
+      );
+      final hltbResult = await hltbSync.fetchAllTimeToBeat(
         db.gamesDao,
         allGames,
         onProgress: (current, total) {
@@ -92,7 +99,7 @@ class SyncNotifier extends Notifier<SyncState> {
       // Always recalculate — status correctness matters more than skipping a
       // cheap pass. The recalculator already diffs and skips unchanged rows.
       final autoCompleted = await db.gamesDao.recalculateAllStatuses(steamId);
-      state = SyncState(notification: _buildSyncNotification(autoCompleted, hltbResult));
+      state = SyncState(notification: buildSyncNotification(autoCompleted, hltbResult));
     } catch (e, st) {
       AppLogger.instance.error('Sync failed', e, st);
       state = SyncState(
@@ -108,7 +115,8 @@ class SyncNotifier extends Notifier<SyncState> {
     }
   }
 
-  static Future<void> _upsertSteamGames(
+  @visibleForTesting
+  static Future<void> upsertSteamGames(
     AppDatabase db,
     List<SteamGame> steamGames,
     String steamId,
@@ -138,18 +146,22 @@ class SyncNotifier extends Notifier<SyncState> {
     });
   }
 
-  static String? _buildSyncNotification(
+  @visibleForTesting
+  static String? buildSyncNotification(
     int autoCompleted,
-    ({int fetched, int failed}) hltbResult,
+    HltbSyncResult hltbResult,
   ) {
     final parts = <String>[];
     if (autoCompleted > 0) {
       final s = autoCompleted == 1 ? 'game' : 'games';
       parts.add('$autoCompleted $s automatically marked completed based on playtime.');
     }
-    if (hltbResult.failed > 0) {
-      final s = hltbResult.failed == 1 ? 'game' : 'games';
-      parts.add('HLTB data unavailable for ${hltbResult.failed} $s — tap a game to set hours manually.');
+    // Failed and deferred games were not stamped, so the next sync retries them.
+    final pending = hltbResult.failed + hltbResult.deferred;
+    if (pending > 0) {
+      final s = pending == 1 ? 'game' : 'games';
+      parts.add('Couldn\'t get HLTB data for $pending $s right now — '
+          'they will be retried on the next sync.');
     }
     return parts.isEmpty ? null : parts.join('\n');
   }

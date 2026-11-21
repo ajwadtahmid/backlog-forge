@@ -32,6 +32,8 @@ class ExportImportService {
                 'completionistHours': g.completionistHours,
                 'hltbName': g.hltbName,
                 'hltbImageUrl': g.hltbImageUrl,
+                'hltbGameId': g.hltbGameId,
+                'hltbVerified': g.hltbVerified,
                 'playStyle': g.playStyle,
                 'manualOverride': g.manualOverride,
                 'addedAt': g.addedAt.toIso8601String(),
@@ -133,6 +135,9 @@ class ExportImportService {
               Value((g['completionistHours'] as num?)?.toDouble()),
           hltbName: Value(g['hltbName'] as String?),
           hltbImageUrl: Value(g['hltbImageUrl'] as String?),
+          // Absent in exports made before schema 13 — defaults keep them valid.
+          hltbGameId: Value((g['hltbGameId'] as num?)?.toInt()),
+          hltbVerified: Value(g['hltbVerified'] as bool? ?? false),
           playStyle: Value(playStyle),
           manualOverride: Value(g['manualOverride'] as bool? ?? false),
           addedAt: Value(DateTime.parse(g['addedAt'] as String)),

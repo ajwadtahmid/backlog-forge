@@ -70,6 +70,7 @@ class GameActions {
     required double? extended,
     required double? completionist,
     String? hltbName,
+    int? hltbGameId,
   }) async {
     await (db.update(db.games)..where((tbl) => tbl.id.equals(g.id))).write(
       GamesCompanion(
@@ -77,6 +78,11 @@ class GameActions {
         extendedHours: Value(extended),
         completionistHours: Value(completionist),
         hltbName: hltbName != null ? Value(hltbName) : const Value.absent(),
+        // A user-picked entry replaces any earlier automatic match.
+        hltbGameId:
+            hltbGameId != null ? Value(hltbGameId) : const Value.absent(),
+        hltbVerified:
+            hltbGameId != null ? const Value(false) : const Value.absent(),
         manualOverride: const Value(true),
       ),
     );

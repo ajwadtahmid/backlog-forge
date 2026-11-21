@@ -33,3 +33,9 @@ class HltbLookupException extends SyncException {
   final String detail;
   const HltbLookupException(this.detail);
 }
+
+/// HowLongToBeat answered 429. Callers should back off rather than retry
+/// immediately; the site asks users to "wait a minute".
+class HltbRateLimitedException extends SyncException {
+  const HltbRateLimitedException();
+}

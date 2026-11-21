@@ -6,7 +6,7 @@ import '../providers/search_provider.dart';
 import '../providers/database_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/app_logger.dart';
-import '../services/hltb_service.dart';
+import '../services/hltb/hltb_names.dart';
 import '../widgets/hltb_search_body.dart';
 import '../models/time_to_beat.dart';
 
@@ -42,7 +42,7 @@ class _ManualSearchScreenState extends ConsumerState<ManualSearchScreen> {
       final games = await db.gamesDao.getAllGames(steamId);
       if (mounted) {
         setState(() {
-          _addedGames = games.map((g) => HltbService.normalise(g.name)).toSet();
+          _addedGames = games.map((g) => HltbNames.normalise(g.name)).toSet();
         });
       }
     } catch (e) {
@@ -70,6 +70,7 @@ class _ManualSearchScreenState extends ConsumerState<ManualSearchScreen> {
     double? extended,
     double? completionist, {
     String? artworkUrl,
+    int? hltbGameId,
   }) async {
     if (_addingGameName.isNotEmpty) return;
 
@@ -92,9 +93,9 @@ class _ManualSearchScreenState extends ConsumerState<ManualSearchScreen> {
 
       // Normalized duplicate check: catches near-matches like "Witcher 3" vs "The Witcher 3"
       final allGames = await db.gamesDao.getAllGames(steamId);
-      final normalizedInput = HltbService.normalise(gameName);
+      final normalizedInput = HltbNames.normalise(gameName);
       final similar = allGames
-          .where((g) => HltbService.normalise(g.name) == normalizedInput)
+          .where((g) => HltbNames.normalise(g.name) == normalizedInput)
           .toList();
       if (similar.isNotEmpty && mounted) {
         final shouldAdd = await showDialog<bool>(
@@ -122,11 +123,15 @@ class _ManualSearchScreenState extends ConsumerState<ManualSearchScreen> {
         }
       }
 
-      final timeToBeat = essential != null || extended != null || completionist != null
+      final timeToBeat = essential != null ||
+              extended != null ||
+              completionist != null ||
+              hltbGameId != null
           ? TimeToBeat(
               essentialHours: essential,
               extendedHours: extended,
               completionistHours: completionist,
+              hltbGameId: hltbGameId,
             )
           : null;
 
@@ -142,7 +147,7 @@ class _ManualSearchScreenState extends ConsumerState<ManualSearchScreen> {
           SnackBar(content: Text('Added "$gameName" to backlog')),
         );
         setState(() {
-          _addedGames.add(HltbService.normalise(gameName));
+          _addedGames.add(HltbNames.normalise(gameName));
         });
       }
     } catch (e, st) {
@@ -192,7 +197,7 @@ class _ManualSearchScreenState extends ConsumerState<ManualSearchScreen> {
             SnackBar(content: Text('Removed "$gameName" from backlog')),
           );
           setState(() {
-            _addedGames.remove(HltbService.normalise(gameName));
+            _addedGames.remove(HltbNames.normalise(gameName));
           });
         }
       } catch (e, st) {
@@ -234,7 +239,7 @@ class _ManualSearchScreenState extends ConsumerState<ManualSearchScreen> {
               searchState: searchState,
               query: _searchController.text,
               trailingBuilder: (result) {
-                final isAdded = _addedGames.contains(HltbService.normalise(result.name));
+                final isAdded = _addedGames.contains(HltbNames.normalise(result.name));
                 if (_addingGameName == result.name) {
                   return const SizedBox(
                     width: 40,
@@ -261,6 +266,7 @@ class _ManualSearchScreenState extends ConsumerState<ManualSearchScreen> {
                         result.extendedHours,
                         result.completionistHours,
                         artworkUrl: result.artworkUrl,
+                        hltbGameId: result.hltbGameId,
                       ),
                 );
               },

@@ -24,7 +24,8 @@ part 'app_database.g.dart';
 //  10 — added hltb_attempted_at to Games
 //  11 — added notes and rating to Games
 //  12 — daily_budget_hours default changed from 1.0 to 0.0 (0 = no budget set)
-const int schemaVersionNumber = 12;
+//  13 — added hltb_game_id and hltb_verified to Games
+const int schemaVersionNumber = 13;
 
 @DriftDatabase(tables: [Games, AppSettings], daos: [GamesDao, SettingsDao, StatsDao])
 class AppDatabase extends _$AppDatabase {
@@ -83,6 +84,10 @@ class AppDatabase extends _$AppDatabase {
       }
       // v12: no structural changes — daily_budget_hours column default changed
       // in Drift layer only. Existing rows keep their stored value.
+      if (fromVersion < 13) {
+        await m.addColumn(games, games.hltbGameId);
+        await m.addColumn(games, games.hltbVerified);
+      }
     },
   );
 

@@ -30,6 +30,8 @@ Game _game({
       hltbName: null,
       playStyle: null,
       hltbAttemptedAt: null,
+      hltbGameId: null,
+      hltbVerified: false,
     );
 
 void main() {

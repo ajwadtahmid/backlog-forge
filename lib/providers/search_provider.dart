@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants.dart';
 import '../models/game_search_result.dart';
-import '../services/hltb_service.dart';
+import '../services/hltb/hltb_names.dart';
+import '../services/sync_exception.dart';
+import 'hltb_provider.dart';
 
 class SearchState {
   final List<GameSearchResult> results;
@@ -27,40 +29,59 @@ class SearchState {
   }
 }
 
-/// Manages game search against the HowLongToBeat proxy.
+/// Manages game search against HowLongToBeat (directly from the device).
 class SearchNotifier extends Notifier<SearchState> {
-  final _hltb = HltbService();
+  static const _kMaxResults = 10;
+
+  /// Incremented per search so a slow, stale response can't overwrite a
+  /// newer one while the user is typing.
+  int _generation = 0;
 
   @override
   SearchState build() => SearchState();
 
   Future<void> search(String query) async {
     final trimmed = query.trim();
+    final generation = ++_generation;
     if (trimmed.isEmpty) {
       state = SearchState();
       return;
     }
-    // Mirror the server-side cap to avoid sending oversized requests.
     if (trimmed.length > AppConstants.kMaxQueryLength) return;
 
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    // Fresh state (not copyWith) so a previous error message is cleared.
+    state = SearchState(results: state.results, isLoading: true);
     try {
-      final results = await _hltb.search(trimmed);
+      final hits = await ref.read(hltbClientProvider).search(trimmed);
+      if (generation != _generation) return;
+      final results = [
+        for (final h in hits)
+          GameSearchResult(
+            name: h.name,
+            artworkUrl: h.imageUrl,
+            essentialHours: h.mainHours,
+            extendedHours: h.extraHours,
+            completionistHours: h.completionistHours,
+            hltbGameId: h.gameId,
+          ),
+      ];
       // Re-rank by client-side normalised similarity so the best match floats up.
-      final sorted = [...results]..sort((a, b) =>
+      results.sort((a, b) =>
           _similarity(trimmed, b.name).compareTo(_similarity(trimmed, a.name)));
-      state = state.copyWith(results: sorted, isLoading: false);
+      state = SearchState(results: results.take(_kMaxResults).toList());
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: 'Search failed. Check your connection and try again.',
+      if (generation != _generation) return;
+      state = SearchState(
+        errorMessage: e is HltbRateLimitedException
+            ? 'HowLongToBeat is busy. Please wait a minute and try again.'
+            : 'Search failed. Check your connection and try again.',
       );
     }
   }
 
   static double _similarity(String query, String candidate) {
-    final q = HltbService.normalise(query);
-    final c = HltbService.normalise(candidate);
+    final q = HltbNames.normalise(query);
+    final c = HltbNames.normalise(candidate);
     if (q == c) return 1.0;
     if (c.startsWith(q)) return 0.9;
     if (c.contains(q)) return 0.75;
@@ -73,7 +94,10 @@ class SearchNotifier extends Notifier<SearchState> {
   }
 
   /// Resets search results and any error state.
-  void clear() => state = SearchState();
+  void clear() {
+    _generation++;
+    state = SearchState();
+  }
 }
 
 final searchProvider =

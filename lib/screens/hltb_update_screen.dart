@@ -8,7 +8,7 @@ import '../providers/search_provider.dart';
 import '../providers/game_actions_provider.dart';
 import '../services/database/app_database.dart';
 import '../widgets/hltb_search_body.dart';
-import '../services/hltb_service.dart';
+import '../services/hltb/hltb_names.dart';
 
 /// Lets the user search HLTB and apply time-to-beat data to an existing game.
 /// Only the essential/extended/completionist hours are updated — no other
@@ -30,7 +30,7 @@ class _HltbUpdateScreenState extends ConsumerState<HltbUpdateScreen> {
   @override
   void initState() {
     super.initState();
-    final query = HltbService.normalise(widget.game.name);
+    final query = HltbNames.normalise(widget.game.name);
     _searchController = TextEditingController(text: query);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(searchProvider.notifier).search(query);
@@ -63,6 +63,7 @@ class _HltbUpdateScreenState extends ConsumerState<HltbUpdateScreen> {
             extended: result.extendedHours,
             completionist: result.completionistHours,
             hltbName: result.name,
+            hltbGameId: result.hltbGameId,
           );
       if (mounted) {
         context.pop();

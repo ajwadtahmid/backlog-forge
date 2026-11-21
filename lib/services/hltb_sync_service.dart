@@ -3,74 +3,138 @@ import '../models/time_to_beat.dart';
 import 'app_logger.dart';
 import 'database/app_database.dart';
 import 'database/games_dao.dart';
-import 'hltb_service.dart';
+import 'sync_exception.dart';
 
-/// Orchestrates HLTB batch lookups: filters which games need data, runs
-/// concurrent requests in batches, and delegates DB writes to [GamesDao].
+/// Resolves one game to HLTB data; null = genuinely not on HLTB.
+/// Matches [HltbResolver.resolve]; a typedef keeps this service testable.
+typedef HltbResolveFn = Future<TimeToBeat?> Function({
+  required String name,
+  int? steamAppId,
+  int? hltbGameId,
+});
+
+/// Outcome counts for one sync pass.
+typedef HltbSyncResult = ({
+  int fetched, // matched and saved
+  int noMatch, // definitively not on HLTB (retry window applies)
+  int failed, // errors; NOT stamped, retried next sync
+  int deferred, // not attempted because the pass stopped early
+});
+
+/// Orchestrates HLTB lookups during a sync: picks games that need data, runs
+/// a small worker pool against the on-device resolver, and writes results.
 ///
-/// Keeping this logic here (rather than in GamesDao) preserves the DAO as a
-/// pure persistence layer and makes the network orchestration independently
-/// testable and replaceable.
+/// * Only definitive answers stamp `hltbAttemptedAt`. Errors leave the game
+///   untouched so the next sync retries it (previously a 429 blanked a game
+///   for the whole retry window).
+/// * On 429 every worker pauses for a shared backoff; when backoff is
+///   exhausted the pass stops and the remaining games are deferred.
+/// * After [maxConsecutiveFailures] errors in a row the pass stops too
+///   (HLTB down or changed), rather than burning through the whole library.
 class HltbSyncService {
-  HltbSyncService();
+  HltbSyncService({
+    required this._resolve,
+    this.concurrency = 2,
+    this.rateLimitBackoff = const [
+      Duration(seconds: 10),
+      Duration(seconds: 30),
+      Duration(seconds: 60),
+    ],
+    this.maxConsecutiveFailures = 5,
+    Future<void> Function(Duration)? sleep,
+  })  : _sleep = sleep ?? Future.delayed;
 
-  static const int _kConcurrency = 3;
-  final _hltb = HltbService();
+  final HltbResolveFn _resolve;
+  final int concurrency;
+  final List<Duration> rateLimitBackoff;
+  final int maxConsecutiveFailures;
+  final Future<void> Function(Duration) _sleep;
 
-  /// Fetches time-to-beat data for any game in [allGames] that does not yet
-  /// have it (or whose last attempt is older than [AppConstants.kHltbRetryWindow]).
-  ///
-  /// Up to [_kConcurrency] requests run concurrently per batch; a
-  /// [AppConstants.kHltbRequestGap] pause is inserted between batches to stay
-  /// within polite-use limits.
-  ///
-  /// [onProgress] is called after each game is processed with (current, total).
-  /// Returns a record with [fetched] (games that got data) and [failed]
-  /// (network/server errors; excludes no-match results).
-  Future<({int fetched, int failed})> fetchAllTimeToBeat(
+  /// Games without HLTB data whose last definitive lookup is outside the
+  /// retry window. Manually overridden games are never touched.
+  static List<Game> gamesNeedingLookup(List<Game> games, {DateTime? now}) {
+    final cutoff =
+        (now ?? DateTime.now()).subtract(AppConstants.kHltbRetryWindow);
+    return games
+        .where((g) =>
+            !g.manualOverride &&
+            g.essentialHours == null &&
+            g.extendedHours == null &&
+            g.completionistHours == null &&
+            (g.hltbAttemptedAt == null || g.hltbAttemptedAt!.isBefore(cutoff)))
+        .toList();
+  }
+
+  /// [onProgress] is called after each game is processed with (done, total).
+  Future<HltbSyncResult> fetchAllTimeToBeat(
     GamesDao dao,
     List<Game> allGames, {
     void Function(int current, int total)? onProgress,
   }) async {
-    final cutoff = DateTime.now().subtract(AppConstants.kHltbRetryWindow);
-    final toFetch = allGames
-        .where(
-          (g) =>
-              !g.manualOverride &&
-              g.essentialHours == null &&
-              g.extendedHours == null &&
-              g.completionistHours == null &&
-              (g.hltbAttemptedAt == null ||
-                  g.hltbAttemptedAt!.isBefore(cutoff)),
-        )
-        .toList();
+    final queue = gamesNeedingLookup(allGames);
+    final total = queue.length;
+    var next = 0, fetched = 0, noMatch = 0, failed = 0, processed = 0;
+    var consecutiveFailures = 0;
+    var stopped = false;
+    Future<void>? cooldown; // shared pause after a 429
 
-    int fetched = 0;
-    int failed = 0;
-    int processed = 0;
-
-    for (int i = 0; i < toFetch.length; i += _kConcurrency) {
-      final batchEnd = (i + _kConcurrency).clamp(0, toFetch.length);
-
-      await Future.wait(toFetch.sublist(i, batchEnd).map((g) async {
-        TimeToBeat? data;
-        try {
-          data = await _hltb.lookup(g.name);
-        } catch (e) {
-          failed++;
-          AppLogger.instance.warning('HLTB lookup failed for "${g.name}"', e);
+    Future<void> worker() async {
+      while (!stopped && next < queue.length) {
+        final game = queue[next++];
+        var backoffStep = 0;
+        while (true) {
+          final pause = cooldown;
+          if (pause != null) await pause;
+          if (stopped) return; // this game counts as deferred
+          try {
+            final data = await _resolve(
+              name: game.name,
+              steamAppId: game.appId > 0 ? game.appId : null,
+              hltbGameId: game.hltbGameId,
+            );
+            if (data != null) {
+              await dao.updateHltbData(game.id, data);
+              fetched++;
+            } else {
+              await dao.markHltbNoMatch(game.id);
+              noMatch++;
+            }
+            consecutiveFailures = 0;
+            break;
+          } on HltbRateLimitedException {
+            if (backoffStep >= rateLimitBackoff.length) {
+              AppLogger.instance
+                  .warning('HLTB rate limit persisted; deferring the rest');
+              stopped = true;
+              return;
+            }
+            final delay = rateLimitBackoff[backoffStep++];
+            AppLogger.instance
+                .warning('HLTB rate limited; pausing ${delay.inSeconds}s');
+            cooldown ??= _sleep(delay).whenComplete(() => cooldown = null);
+          } catch (e) {
+            failed++;
+            consecutiveFailures++;
+            AppLogger.instance
+                .warning('HLTB lookup failed for "${game.name}"', e);
+            if (consecutiveFailures >= maxConsecutiveFailures) {
+              AppLogger.instance.warning(
+                  'HLTB: $consecutiveFailures failures in a row; stopping');
+              stopped = true;
+            }
+            break;
+          }
         }
-
-        if (data != null) fetched++;
-        await dao.updateHltbData(g.id, data);
-        onProgress?.call(++processed, toFetch.length);
-      }));
-
-      if (batchEnd < toFetch.length) {
-        await Future.delayed(AppConstants.kHltbRequestGap);
+        onProgress?.call(++processed, total);
       }
     }
 
-    return (fetched: fetched, failed: failed);
+    await Future.wait(List.generate(concurrency, (_) => worker()));
+    return (
+      fetched: fetched,
+      noMatch: noMatch,
+      failed: failed,
+      deferred: total - fetched - noMatch - failed,
+    );
   }
 }

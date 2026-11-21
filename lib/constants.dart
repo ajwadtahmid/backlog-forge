@@ -1,19 +1,16 @@
 /// App-wide constants. Centralised here so a single change propagates everywhere.
 abstract final class AppConstants {
   // ── Network timeouts ────────────────────────────────────────────────────────
-  /// Timeout for all HLTB proxy requests (search + lookup).
+  /// Timeout for each request to howlongtobeat.com (made from the device).
   static const kHltbTimeout = Duration(seconds: 15);
 
-  /// Timeout for Steam library requests; extra headroom for Render cold starts.
-  static const kSteamTimeout = Duration(seconds: 45);
+  /// Timeout for Steam library requests via the Cloudflare Worker (no cold
+  /// starts; the Worker itself gives up on Steam after 15 s).
+  static const kSteamTimeout = Duration(seconds: 20);
 
   // ── Debounce / pacing ───────────────────────────────────────────────────────
   /// Debounce delay before firing a search query while the user is typing.
   static const kSearchDebounce = Duration(milliseconds: 400);
-
-  /// Minimum gap between sequential HLTB fetch requests during a sync to avoid
-  /// rate-limiting the backend scraper.
-  static const kHltbRequestGap = Duration(milliseconds: 300);
 
   // ── Query limits ────────────────────────────────────────────────────────────
   /// Maximum search query length; mirrors the server-side cap in app.py.
