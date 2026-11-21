@@ -16,7 +16,7 @@
     <img alt="Downloads" src="https://img.shields.io/github/downloads/ajwadtahmid/backlog-forge/total?color=blue" />
   </a>
   <a href="https://flutter.dev">
-    <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.x-blue?logo=flutter&logoColor=white" />
+    <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.50-blue?logo=flutter&logoColor=white" />
   </a>
   <a href="https://github.com/ajwadtahmid/backlog-forge/blob/main/LICENSE">
     <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-green" />

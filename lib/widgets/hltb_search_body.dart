@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../models/game_search_result.dart';
 import '../providers/search_provider.dart';
 import 'hltb_result_tile.dart';
