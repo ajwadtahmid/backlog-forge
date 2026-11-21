@@ -15,7 +15,6 @@ class SteamService {
   static final _headers = ApiConfig.clientToken.isNotEmpty
       ? {'X-Client-Token': ApiConfig.clientToken}
       : const <String, String>{};
-  // Extra headroom to accommodate Render free-tier cold starts (~30 s spin-up).
   static const _timeout = AppConstants.kSteamTimeout;
 
   // Steam64 IDs are 17-digit numbers starting with 7656119.
