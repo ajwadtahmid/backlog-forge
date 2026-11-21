@@ -93,7 +93,7 @@ Designed for PC gamers who own large Steam libraries and want a structured, low-
 
 - **Steam library sync** — imports all games from your Steam account automatically
 - **Guest / offline mode** — use the app without a Steam account; add games manually
-- **HowLongToBeat integration** — fetches Essential, Extended, and Completionist estimates per title
+- **HowLongToBeat integration** — fetches Essential, Extended, and Completionist estimates per title straight from your device, matching games by Steam app ID where HLTB has the link
 - **Sync progress feedback** — live counter shows HLTB fetch progress during sync
 - **Automatic completion detection** — marks a game completed when playtime meets the target
 - **Configurable play style** — choose Essential, Extended, or Completionist as your personal target per game
@@ -121,10 +121,11 @@ Designed for PC gamers who own large Steam libraries and want a structured, low-
 
 | Tool | Version |
 |------|---------|
-| Flutter SDK | 3.x (stable channel) |
-| Dart SDK | bundled with Flutter |
+| Flutter SDK | 3.50+ (stable channel) |
+| Dart SDK | 3.14+ (bundled with Flutter) |
 | Android: Java | 17 |
 | Linux: GTK | `libgtk-3-dev` |
+| Backend (optional) | Node.js 20+, only to deploy `backend/worker` |
 
 ### Quick Start
 
@@ -151,7 +152,7 @@ flutter run
 
 ### Configuration
 
-The app proxies Steam and HowLongToBeat requests through a private backend to keep API keys off the client.
+The app uses a small backend for the two things that need a secret or an https URL: fetching your Steam library (the Steam API key stays on the server) and the Steam sign-in redirect. HowLongToBeat lookups do **not** go through it. The app queries howlongtobeat.com directly from your device.
 
 ```env
 # .env
@@ -159,34 +160,60 @@ BACKEND_URL=https://your-backend-url.com
 CLIENT_TOKEN=your-secret-token
 ```
 
-After editing `.env`, regenerate:
+The values are baked into the app at build time. After editing `.env`, regenerate (the `clean` step matters: without it a stale `BACKEND_URL` can stay compiled in):
 
 ```bash
+dart run build_runner clean
 dart run build_runner build --delete-conflicting-outputs
 ```
 
 #### Backend
 
-The hosted backend runs at `backlogforge.onrender.com` by default — no extra setup needed for standard use.
+The hosted backend is a Cloudflare Worker at `backlog-forge-api.ajwad.dev` — no extra setup needed for standard use.
 
-To self-host, deploy the server and set the following environment variables:
+To self-host, deploy the Worker in [`backend/worker`](backend/worker) — its README has the full walkthrough. In short:
 
-| Variable | Description |
-|----------|-------------|
-| `STEAM_API_KEY` | Steam Web API key from [steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey) |
-| `CLIENT_TOKEN` | Shared secret matching the `CLIENT_TOKEN` in your app's `.env` |
+```bash
+cd backend/worker
+npm install
+npx wrangler deploy
+npx wrangler secret put STEAM_API_KEY   # Steam Web API key from steamcommunity.com/dev/apikey
+npx wrangler secret put CLIENT_TOKEN    # shared secret matching CLIENT_TOKEN in your app's .env
+```
 
 Generate a secure token with:
 
 ```bash
-python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+openssl rand -hex 32
+```
+
+Then set `BACKEND_URL` and `CLIENT_TOKEN` in `.env` and regenerate as above.
+
+### Testing
+
+```bash
+flutter analyze
+flutter test                                     # unit tests, no network
+
+# Opt-in checks against the real services:
+HLTB_LIVE=1 flutter test test/live/hltb_live_test.dart
+
+# Full sync on a COPY of an existing app database (your real one is never written):
+E2E_DB=<path to backlogforge.db> E2E_STEAM_ID=<17-digit id> \
+  flutter test test/live/e2e_sync_live_test.dart
+
+cd backend/worker && npm test                    # Worker tests
 ```
 
 ## Data & Privacy
 
-- **No login, no account.** Steam ID is stored locally only; no credentials are ever sent to BacklogForge servers.
-- **No analytics or tracking.** The app does not collect or send any user data.
+- **No login, no account.** Steam sign-in happens on Steam's own page; BacklogForge never sees your password.
+- **Steam ID.** It is stored on your device and sent to the BacklogForge backend only to fetch your public game library from Steam. The backend does not store it.
+- **HowLongToBeat.** Game titles are sent directly from your device to howlongtobeat.com to look up completion times, so HowLongToBeat sees your IP address like any website would. These requests do not pass through the BacklogForge backend.
+- **No analytics or tracking.** The app contains no analytics, advertising or tracking SDKs.
 - **Local-only storage.** All game data, notes, ratings, and settings are stored on-device in SQLite.
+
+See the full [privacy policy](https://ajwadtahmid.github.io/privacy-policies/).
 
 ---
 
@@ -205,7 +232,7 @@ Have a question or found a bug? Let us know:
 Special thanks to:
 
 - **[HowLongToBeat](https://howlongtobeat.com)** — Game completion time estimates that power the core tracking feature
-- **[howlongtobeatpy](https://github.com/ScrappyCocco/HowLongToBeat-PythonAPI)** — Python library used by the backend to query HowLongToBeat
+- **[hltb-for-deck](https://github.com/morwy/hltb-for-deck)** — Steam Deck plugin whose approach to querying HowLongToBeat (cached endpoint discovery, Steam app ID matching) the app's on-device client follows
 - **[Valve / Steam](https://store.steampowered.com)** — Steam Web API for importing game libraries and playtime data
 - **[Claude Code](https://claude.ai/code)** — Parts of this project were built with the assistance of Claude
 
@@ -220,7 +247,7 @@ No. BacklogForge is an unofficial fan project. It uses the public Steam Web API 
 No. You can use guest mode and add games manually. A Steam account is only needed to import your library automatically.
 
 **Q: Is my data stored in the cloud?**
-No. All data — games, notes, ratings, settings — is stored locally in a SQLite database on your device. Nothing is sent to any BacklogForge server.
+No. All data — games, notes, ratings, settings — is stored locally in a SQLite database on your device. Your Steam ID is sent to the BacklogForge backend only to fetch your library from Steam and is not stored there. Game titles are sent straight from your device to HowLongToBeat to look up completion times.
 
 **Q: How does automatic completion detection work?**
 BacklogForge compares your Steam playtime against the HowLongToBeat estimate for your chosen play style (Essential, Extended, or Completionist). When your playtime meets or exceeds the target, the game is automatically marked as completed.
@@ -238,6 +265,8 @@ Yes. Use the manual search to find any game on HowLongToBeat and add it to your 
 - **Steam only** — automatic sync works with Steam libraries only; non-Steam games must be added manually
 - **Public Steam profile required** — the app cannot import a private Steam library
 - **HowLongToBeat coverage** — not every game has HLTB data; games without estimates still appear in your library but won't have completion targets or finish-by projections
+- **HowLongToBeat matching** — games are matched by Steam app ID when HLTB links it; otherwise the closest title wins and may need correcting via *Update Time to Beat*
+- **HowLongToBeat limits** — lookups run from your device and need access to howlongtobeat.com. If HLTB rate-limits you mid-sync, the remaining games are retried on the next sync rather than skipped
 - **Background sync** — the 2-hour background sync only runs while the app is open; playtime changes when the app is closed are picked up on the next manual or automatic sync
 - **Playtime source** — playtime is sourced from Steam and may differ slightly from in-game clocks
 
