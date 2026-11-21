@@ -1,0 +1,3 @@
+# Copy to .dev.vars for `npm run dev` (local only, gitignored).
+STEAM_API_KEY=your-steam-web-api-key
+CLIENT_TOKEN=any-long-random-string
