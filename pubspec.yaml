@@ -75,7 +75,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/artwork/
     - assets/fonts/
 
   # Bundled fonts (SIL Open Font License, texts next to the files). Static

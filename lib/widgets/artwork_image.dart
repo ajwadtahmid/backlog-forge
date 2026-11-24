@@ -1,8 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 
-const _kNoArtwork = 'assets/artwork/no_artwork.png';
-
 /// Displays game artwork from a network [url], falling back to the bundled
 /// no-artwork asset when the URL is null or the network request fails.
 class ArtworkImage extends StatelessWidget {
@@ -24,7 +22,7 @@ class ArtworkImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (url == null) {
-      return Image.asset(_kNoArtwork, width: width, height: height, fit: fit);
+      return _NoArtwork(width: width, height: height);
     }
     return CachedNetworkImage(
       imageUrl: url!,
@@ -37,11 +35,38 @@ class ArtworkImage extends StatelessWidget {
         height: height,
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
       ),
-      errorWidget: (context, url, error) => Image.asset(
-        _kNoArtwork,
-        width: width,
-        height: height,
-        fit: fit,
+      errorWidget: (context, url, error) =>
+          _NoArtwork(width: width, height: height),
+    );
+  }
+}
+
+/// Placeholder for a game without artwork. Drawn from the theme (it used to
+/// be a fixed dark image, which looked like a hole in the light theme).
+class _NoArtwork extends StatelessWidget {
+  const _NoArtwork({this.width, this.height});
+  final double? width;
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: width,
+      height: height,
+      color: cs.surfaceContainerHighest,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(4),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          'No Artwork',
+          style: TextStyle(
+            color: cs.onSurfaceVariant,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

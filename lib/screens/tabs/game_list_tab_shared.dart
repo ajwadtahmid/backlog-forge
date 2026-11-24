@@ -113,7 +113,7 @@ mixin GameListTabMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              'Swipe a row left or right to change status',
+              'Swipe a row left to change its status',
               style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
             ),
           ),
@@ -308,7 +308,8 @@ mixin GameListTabMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
           ),
           if (extraControls != null)
             SizedBox(width: double.infinity, child: extraControls),
-          _swipeHint(context),
+          if (gamesFuture.asData?.value.isNotEmpty ?? false)
+            _swipeHint(context),
         ],
         Expanded(
           child: gamesFuture.when(
@@ -339,10 +340,16 @@ mixin GameListTabMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                                   color: cs.onSurfaceVariant.withValues(alpha: 0.35),
                                 ),
                                 const SizedBox(height: 12),
-                                Text(
-                                  query.isEmpty ? emptyText : 'No results for "$query"',
-                                  style: TextStyle(color: cs.onSurfaceVariant),
-                                  textAlign: TextAlign.center,
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 32),
+                                  child: Text(
+                                    query.isEmpty
+                                        ? emptyText
+                                        : 'No results for "$query"',
+                                    style: TextStyle(color: cs.onSurfaceVariant),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
                               ],
                             ),
@@ -572,10 +579,16 @@ class BulkAction {
     required this.icon,
     required this.label,
     required this.onPressed,
+    this.shortLabel,
   });
 
   final IconData icon;
+
+  /// Full description, used as the tooltip and by screen readers.
   final String label;
+
+  /// One or two words shown under the icon; defaults to [label].
+  final String? shortLabel;
   final VoidCallback onPressed;
 }
 
@@ -612,11 +625,28 @@ class BulkActionBar extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const Spacer(),
+              // Icon over a short caption: three bare icons had to be guessed.
               for (final action in actions)
-                IconButton(
-                  icon: Icon(action.icon),
-                  tooltip: action.label,
-                  onPressed: action.onPressed,
+                Tooltip(
+                  message: action.label,
+                  child: InkWell(
+                    onTap: action.onPressed,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(action.icon),
+                          Text(
+                            action.shortLabel ?? action.label,
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
             ],
           ),

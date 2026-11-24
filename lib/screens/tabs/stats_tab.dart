@@ -80,6 +80,8 @@ class _HeroCard extends StatelessWidget {
     final total = stats.backlogCount + stats.completedCount;
     final gradeColor = CompletionGradeCard.gradeColor(stats.grade, cs);
     final pct = total == 0 ? 0.0 : stats.completionPercent;
+    // A grade for zero games would be a red "D-" for doing nothing wrong.
+    final hasGames = total > 0;
 
     return Card(
       child: Padding(
@@ -134,7 +136,8 @@ class _HeroCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                if (hasGames) const SizedBox(width: 16),
+                if (hasGames)
                 Container(
                   width: 54,
                   height: 54,
@@ -166,7 +169,7 @@ class _HeroCard extends StatelessWidget {
                 value: total == 0 ? 0 : pct / 100,
                 minHeight: 10,
                 backgroundColor: cs.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation(gradeColor),
+                valueColor: AlwaysStoppedAnimation(hasGames ? gradeColor : cs.primary),
               ),
             ),
           ],

@@ -148,16 +148,19 @@ class _CompletedTabState extends ConsumerState<CompletedTab>
           BulkAction(
             icon: Icons.inbox_outlined,
             label: 'Move to backlog',
+            shortLabel: 'Backlog',
             onPressed: () => _bulkMoveToBacklog(filtered),
           ),
           BulkAction(
             icon: Icons.replay_outlined,
             label: 'Mark as playing',
+            shortLabel: 'Replaying',
             onPressed: () => _bulkMarkPlaying(filtered),
           ),
           BulkAction(
             icon: Icons.stop_circle_outlined,
             label: 'Stop replaying',
+            shortLabel: 'Stop',
             onPressed: () => _bulkStopReplaying(filtered),
           ),
         ],

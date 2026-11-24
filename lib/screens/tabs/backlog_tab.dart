@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/game_status.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/sort_provider.dart';
 import '../../providers/game_actions_provider.dart';
 import '../../services/database/app_database.dart';
@@ -150,11 +151,16 @@ class _BacklogTabState extends ConsumerState<BacklogTab>
     final filter = ref.watch(backlogFilterProvider);
     final extraFilter = ref.watch(backlogExtraFilterProvider);
     final gamesFuture = ref.watch(backlogSortedProvider);
+    final isGuest = ref.watch(authProvider).asData?.value.steamId ==
+        AuthNotifier.guestSteamId;
 
     return buildGameListBody(
       gamesFuture: gamesFuture,
       searchHint: 'Search backlog…',
-      emptyText: 'Your backlog is empty — add a game or sync with Steam',
+      // A guest can't sync, so don't tell them to.
+      emptyText: isGuest
+          ? 'Your backlog is empty.\nAdd a game with the + button, or restore a backup in Settings.'
+          : 'Your backlog is empty.\nAdd a game with the + button, or sync with Steam.',
       emptyIcon: Icons.inbox_outlined,
       extraControls: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,16 +191,19 @@ class _BacklogTabState extends ConsumerState<BacklogTab>
           BulkAction(
             icon: Icons.check_circle_outline,
             label: 'Mark complete',
+            shortLabel: 'Complete',
             onPressed: () => _bulkComplete(filtered),
           ),
           BulkAction(
             icon: Icons.play_arrow_outlined,
             label: 'Mark playing',
+            shortLabel: 'Playing',
             onPressed: () => _bulkMarkPlaying(filtered),
           ),
           BulkAction(
             icon: Icons.undo,
             label: 'Remove from playing',
+            shortLabel: 'Not playing',
             onPressed: () => _bulkMarkNotPlaying(filtered),
           ),
         ],

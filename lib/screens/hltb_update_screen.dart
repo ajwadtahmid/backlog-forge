@@ -31,7 +31,8 @@ class _HltbUpdateScreenState extends ConsumerState<HltbUpdateScreen> {
   void initState() {
     super.initState();
     final query = HltbNames.normalise(widget.game.name);
-    _searchController = TextEditingController(text: query);
+    // Show the game's real name; search with the cleaned-up form of it.
+    _searchController = TextEditingController(text: widget.game.name);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(searchProvider.notifier).search(query);
     });
@@ -107,10 +108,9 @@ class _HltbUpdateScreenState extends ConsumerState<HltbUpdateScreen> {
                       width: 40,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : IconButton(
-                      icon: const Icon(Icons.check),
-                      tooltip: 'Apply this data',
+                  : FilledButton.tonal(
                       onPressed: () => _applyResult(result),
+                      child: const Text('Use'),
                     ),
             ),
           ),

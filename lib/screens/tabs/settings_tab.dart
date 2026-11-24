@@ -44,8 +44,9 @@ class SettingsTab extends ConsumerWidget {
                 title: Text(isGuest ? 'Guest Mode' : 'Steam Account'),
                 subtitle: Text(
                   isGuest
-                      ? 'Sign in to sync your Steam library'
+                      ? 'Your library stays on this phone'
                       : 'ID: ${auth.steamId}',
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 trailing: isGuest
@@ -90,7 +91,7 @@ class SettingsTab extends ConsumerWidget {
                       ),
                 title: const Text('Re-sync Library'),
                 subtitle: Text(
-                  isGuest ? 'Sign in to sync your Steam library' : _syncSubtitle(syncState),
+                  isGuest ? 'Sign in with Steam to enable' : _syncSubtitle(syncState),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),

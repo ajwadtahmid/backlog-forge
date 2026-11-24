@@ -102,33 +102,24 @@ class _GameCardState extends ConsumerState<GameCard> {
 
     return Slidable(
       key: ValueKey(game.id),
-      startActionPane: ActionPane(
-        motion: const BehindMotion(),
-        extentRatio: 0.15,
-        children: [
-          if (game.appId < 0)
-            SlidableAction(
-              onPressed: (_) => _confirmDelete(),
-              backgroundColor: cs.errorContainer,
-              foregroundColor: cs.onErrorContainer,
-              icon: Icons.delete_outline,
-              label: 'Delete',
-            )
-          else
-            SlidableAction(
-              onPressed: (_) => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Steam games cannot be deleted from your library'),
-                  duration: Duration(seconds: 2),
+      // Only manually added games can be deleted, so only they get a swipe
+      // pane on this side. Steam games used to reveal an unexplained "Locked"
+      // button here.
+      startActionPane: game.appId < 0
+          ? ActionPane(
+              motion: const BehindMotion(),
+              extentRatio: 0.15,
+              children: [
+                SlidableAction(
+                  onPressed: (_) => _confirmDelete(),
+                  backgroundColor: cs.errorContainer,
+                  foregroundColor: cs.onErrorContainer,
+                  icon: Icons.delete_outline,
+                  label: 'Delete',
                 ),
-              ),
-              backgroundColor: cs.surfaceContainerHigh,
-              foregroundColor: cs.onSurfaceVariant,
-              icon: Icons.lock_outline,
-              label: 'Locked',
-            ),
-        ],
-      ),
+              ],
+            )
+          : null,
       endActionPane: ActionPane(
         motion: const BehindMotion(),
         extentRatio: 0.28,
@@ -171,8 +162,9 @@ class _GameCardState extends ConsumerState<GameCard> {
           else
             SlidableAction(
               onPressed: (_) => _setStatus(GameStatus.completed),
-              backgroundColor: cs.tertiaryContainer,
-              foregroundColor: cs.onTertiaryContainer,
+              // Green, not the theme's pink-red tertiary: red reads as delete.
+              backgroundColor: kColorPlaying,
+              foregroundColor: const Color(0xFF06281A),
               icon: Icons.check_outlined,
               label: 'Done',
             ),
@@ -265,10 +257,10 @@ class _GameCardState extends ConsumerState<GameCard> {
         border: Border.all(
             color: kColorPlaying.withValues(alpha: 0.4), width: 0.5),
       ),
-      child: const Text(
+      child: Text(
         'Playing',
         style: TextStyle(
-          color: kColorPlaying,
+          color: playingTextColor(context),
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.3,

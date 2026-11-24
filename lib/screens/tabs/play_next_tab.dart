@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../constants.dart';
 import '../../providers/play_next_provider.dart';
+import '../../providers/sort_provider.dart';
 import '../../util/ui_tokens.dart';
 import '../../providers/daily_budget_provider.dart';
 import '../../services/database/app_database.dart';
@@ -26,7 +27,9 @@ class PlayNextTab extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ── Method selector ───────────────────────────────────────
-          Row(
+          IntrinsicHeight(
+            child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: _MethodCard(
@@ -49,12 +52,13 @@ class PlayNextTab extends ConsumerWidget {
               ),
             ],
           ),
+          ),
           const SizedBox(height: 16),
 
           // ── Primary action ────────────────────────────────────────
           if (isShuffle)
             _ActionCard(
-              icon: state.loading ? Icons.hourglass_empty : Icons.shuffle,
+              icon: state.loading ? Icons.hourglass_empty : Icons.casino_outlined,
               title: state.loading ? 'Finding…' : 'Find Games',
               loading: state.loading,
               onTap: notifier.spin,
@@ -113,6 +117,14 @@ class PlayNextTab extends ConsumerWidget {
 
           if (state.loading)
             const Expanded(child: PlayNextSkeleton())
+          else if (!state.spun)
+            Expanded(
+              child: _PlayNextHint(
+                backlogEmpty:
+                    ref.watch(backlogSortedProvider).asData?.value.isEmpty ??
+                        false,
+              ),
+            )
           else if (state.spun)
             _PicksSection(
               picks: state.picks,
@@ -126,6 +138,41 @@ class PlayNextTab extends ConsumerWidget {
               onLoadMore: notifier.loadMoreFocused,
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shown below the mode cards before the first search, so the tab never looks
+/// like a half-loaded screen.
+class _PlayNextHint extends StatelessWidget {
+  const _PlayNextHint({required this.backlogEmpty});
+  final bool backlogEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              backlogEmpty ? Icons.inbox_outlined : Icons.casino_outlined,
+              size: 56,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.35),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              backlogEmpty
+                  ? 'Your backlog is empty.\nAdd some games and suggestions will show up here.'
+                  : 'Pick a mode, then tap the button above to get suggestions from your backlog.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     );
   }

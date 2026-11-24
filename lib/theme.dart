@@ -24,6 +24,14 @@ const _kLightOutlineVariant    = Color(0xFFD8D5EC);
 // Semantic state colors — consistent across light/dark
 const kColorPlaying    = Color(0xFF4CAF82);
 const kColorPlayingBg  = Color(0x1A4CAF82);
+
+/// Text colour for the "Playing" badge. The bright green is fine on dark
+/// surfaces but only reaches about 2:1 on the light theme's pale green badge,
+/// so light mode uses a deeper green (about 6:1).
+Color playingTextColor(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+        ? kColorPlaying
+        : const Color(0xFF1B6B47);
 const kColorProgressLo = Color(0xFF6C4DF6);
 const kColorProgressMid = Color(0xFFFFB74D);
 const kColorProgressHi = Color(0xFF4CAF82);
