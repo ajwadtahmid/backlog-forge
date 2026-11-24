@@ -25,6 +25,10 @@ abstract final class AppConstants {
   /// Debounce delay before firing a search query while the user is typing.
   static const kSearchDebounce = Duration(milliseconds: 400);
 
+  /// Delay before the Backlog / Completed lists re-filter while typing. Much
+  /// shorter than [kSearchDebounce] because it is a local filter, not a request.
+  static const kListSearchDebounce = Duration(milliseconds: 150);
+
   // ── Query limits ────────────────────────────────────────────────────────────
   /// Maximum search query length; mirrors the server-side cap in app.py.
   static const kMaxQueryLength = 100;

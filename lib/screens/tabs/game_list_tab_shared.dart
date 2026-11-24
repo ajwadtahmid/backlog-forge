@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,8 +26,11 @@ mixin GameListTabMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   bool selectionMode = false;
   final selectedIds = <int>{};
 
+  Timer? _searchDebounce;
+
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     searchController.dispose();
     super.dispose();
   }
@@ -295,6 +299,7 @@ mixin GameListTabMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 18),
                         onPressed: () {
+                          _searchDebounce?.cancel();
                           searchController.clear();
                           setState(() => query = '');
                         },
@@ -303,7 +308,16 @@ mixin GameListTabMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                 isDense: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              onChanged: (v) => setState(() => query = v.trim().toLowerCase()),
+              // Filtering a big library on every keystroke janks the keyboard;
+              // wait for a short pause in typing.
+              onChanged: (v) {
+                _searchDebounce?.cancel();
+                _searchDebounce = Timer(AppConstants.kListSearchDebounce, () {
+                  if (mounted) {
+                    setState(() => query = v.trim().toLowerCase());
+                  }
+                });
+              },
             ),
           ),
           if (extraControls != null)
@@ -316,9 +330,10 @@ mixin GameListTabMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
             loading: () => const GameListSkeleton(),
             error: (e, _) => Center(child: Text('Error: $e')),
             data: (games) {
+              final matcher = GameNameMatcher(query);
               final filtered = query.isEmpty || selectionMode
                   ? games
-                  : games.where((g) => matchesGameName(g.name, query)).toList();
+                  : games.where((g) => matcher.matches(g.name)).toList();
 
               if (filtered.isEmpty) {
                 final cs = Theme.of(context).colorScheme;
@@ -458,52 +473,6 @@ mixin GameListTabMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
         ),
       ],
     );
-  }
-
-  /// Bulk-deletes all selected manually-added games. Steam games are skipped
-  /// with a confirmation dialog and a follow-up snackbar for the skip count.
-  Future<void> bulkDelete(List<Game> filteredGames) async {
-    final selected =
-        filteredGames.where((g) => selectedIds.contains(g.id)).toList();
-    final steamCount = selected.where((g) => g.appId >= 0).length;
-    final deletable = selected.where((g) => g.appId < 0).length;
-
-    if (deletable == 0) {
-      showSnack('Steam games cannot be deleted');
-      return;
-    }
-
-    final message = steamCount > 0
-        ? 'Delete $deletable game${deletable == 1 ? '' : 's'}? '
-            '($steamCount Steam game${steamCount == 1 ? '' : 's'} will be skipped)'
-        : 'Delete $deletable game${deletable == 1 ? '' : 's'}?';
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete games?'),
-        content: Text(message),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete',
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && mounted) {
-      final skipped =
-          await ref.read(gameActionsProvider).bulkDelete(selected);
-      cancelSelection();
-      if (skipped > 0) {
-        showSnack('$skipped Steam game${skipped == 1 ? '' : 's'} skipped');
-      }
-    }
   }
 }
 

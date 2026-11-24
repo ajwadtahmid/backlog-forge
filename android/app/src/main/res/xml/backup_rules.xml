@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and older: what Auto Backup may copy. Everything is included
+     (the library database, preferences) except flutter_secure_storage's three
+     files: the stored values, the wrapped encryption key and its settings.
+     The key is wrapped with a Keystore key that is not restored on a new
+     device, so a restored copy would be unreadable and only cause "failed to
+     unwrap key" errors. The names come from the plugin's shared_prefs folder. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureStorageConfiguration:FlutterSecureStorage.xml" />
+</full-backup-content>

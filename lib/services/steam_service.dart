@@ -49,15 +49,25 @@ class SteamService {
         throw const SteamApiException();
       }
       if (decoded is! List) throw const SteamApiException();
-      return decoded
-          .map((g) => SteamGame.fromJson(g as Map<String, dynamic>))
-          .toList();
+      try {
+        return decoded
+            .map((g) => SteamGame.fromJson(g as Map<String, dynamic>))
+            .toList();
+      } on TypeError {
+        // A game entry with a missing or wrongly typed field.
+        throw const SteamApiException();
+      }
     } on SyncException {
       rethrow;
     } on TimeoutException {
       throw const ServerTimeoutException();
     } on SocketException {
       throw const NetworkException();
+    } on http.ClientException {
+      throw const NetworkException();
+    } on HandshakeException {
+      // TLS failed (bad certificate, wrong clock): reachable, but not usable.
+      throw const SteamApiException();
     }
   }
 
@@ -81,7 +91,12 @@ class SteamService {
       }
       if (decoded is! List) throw const SteamApiException();
       if (decoded.isEmpty) return null;
-      final game = SteamGame.fromJson(decoded.first as Map<String, dynamic>);
+      final SteamGame game;
+      try {
+        game = SteamGame.fromJson(decoded.first as Map<String, dynamic>);
+      } on TypeError {
+        throw const SteamApiException();
+      }
       return game.playtimeMinutes;
     } on SyncException {
       rethrow;
@@ -89,6 +104,11 @@ class SteamService {
       throw const ServerTimeoutException();
     } on SocketException {
       throw const NetworkException();
+    } on http.ClientException {
+      throw const NetworkException();
+    } on HandshakeException {
+      // TLS failed (bad certificate, wrong clock): reachable, but not usable.
+      throw const SteamApiException();
     }
   }
 }

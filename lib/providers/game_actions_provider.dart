@@ -165,18 +165,6 @@ class GameActions {
       ),
     );
   }
-
-  /// Deletes only manually-added games (appId < 0) from [games].
-  /// Returns the number of Steam games that were skipped.
-  Future<int> bulkDelete(List<Game> games) async {
-    final deletable = games.where((g) => g.appId < 0).toList();
-    final skipped = games.length - deletable.length;
-    if (deletable.isNotEmpty) {
-      final ids = deletable.map((g) => g.id).toList();
-      await (db.delete(db.games)..where((g) => g.id.isIn(ids))).go();
-    }
-    return skipped;
-  }
 }
 
 final gameActionsProvider = Provider((ref) {

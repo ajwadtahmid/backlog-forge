@@ -1,6 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 
+/// Width in pixels to decode a thumbnail at, or null to decode the full image.
+/// Steam headers are 460 px wide but a list thumbnail is about 100 dp, so
+/// decoding at full size wastes memory on every visible row.
+int? thumbnailDecodeWidth(double? logicalWidth, double devicePixelRatio) =>
+    logicalWidth == null ? null : (logicalWidth * devicePixelRatio).round();
+
 /// Displays game artwork from a network [url], falling back to the bundled
 /// no-artwork asset when the URL is null or the network request fails.
 class ArtworkImage extends StatelessWidget {
@@ -30,6 +36,8 @@ class ArtworkImage extends StatelessWidget {
       height: height,
       fit: fit,
       alignment: alignment,
+      memCacheWidth: thumbnailDecodeWidth(
+          width, MediaQuery.devicePixelRatioOf(context)),
       placeholder: (context, url) => Container(
         width: width,
         height: height,

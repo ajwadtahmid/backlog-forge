@@ -5,7 +5,6 @@ import 'providers/auth_provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/library_screen.dart';
 import 'screens/game_detail_screen.dart';
-import 'screens/global_search_screen.dart';
 import 'screens/hltb_update_screen.dart';
 import 'screens/manual_search_screen.dart';
 import 'services/database/app_database.dart';
@@ -50,10 +49,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'search',
             builder: (context, state) => const ManualSearchScreen(),
-          ),
-          GoRoute(
-            path: 'unified-search',
-            builder: (context, state) => const GlobalSearchScreen(),
           ),
           GoRoute(
             path: 'game/:id',

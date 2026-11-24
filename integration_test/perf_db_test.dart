@@ -48,7 +48,9 @@ void main() {
       final t = <int>[];
       for (var r = 0; r < 20; r++) {
         sw = Stopwatch()..start();
-        all.where((g) => matchesGameName(g.name, 'witcher3')).length;
+        // Same call the Backlog tab makes: one matcher for the whole list.
+        final m = GameNameMatcher('witcher3');
+        all.where((g) => m.matches(g.name)).length;
         t.add(sw.elapsedMicroseconds);
       }
       t.sort();

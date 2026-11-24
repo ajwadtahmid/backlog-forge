@@ -80,13 +80,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   ),
                 ),
           if (showTopNav) const SizedBox(width: 4),
-          // Hidden for now: global search button
-          // IconButton(
-          //   icon: const Icon(Icons.search),
-          //   tooltip: 'Search all games',
-          //   onPressed: () => context.push('/library/unified-search'),
-          // ),
-          // const SizedBox(width: 4),
         ],
       ),
       body: Row(

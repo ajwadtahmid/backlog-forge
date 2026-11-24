@@ -29,9 +29,11 @@ class GameDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
-  late GameStatus _status;
-  late PlayStyle _playStyle;
   bool _saving = false;
+
+  /// Rating shown while the slider is being dragged. The value is written once,
+  /// when the finger lifts, rather than on every notch.
+  double? _draftRating;
 
   /// True once the artwork header has scrolled up under the toolbar. The
   /// toolbar is see-through over the artwork, but must turn opaque (and name
@@ -68,16 +70,17 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _status = widget.game.status.toGameStatus;
-    _playStyle = widget.game.playStyle.toPlayStyle;
     _scroll.addListener(_onScroll);
   }
 
-  double? _targetHours(Game game) => resolveTargetHours(game, _playStyle);
+  // Status and play style are read straight from the watched game, so a change
+  // made elsewhere (a sync, a bulk action) shows up here instead of leaving
+  // stale selections.
+  double? _targetHours(Game game) =>
+      resolveTargetHours(game, game.playStyle.toPlayStyle);
 
   Future<void> _setStatus(Game game, GameStatus next) async {
-    if (next == _status) return;
-    setState(() => _status = next);
+    if (next == game.status.toGameStatus) return;
     await _withSaving(
       () => ref
           .read(gameActionsProvider)
@@ -90,12 +93,20 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     );
   }
 
-  Future<void> _setPlayStyle(PlayStyle style) async {
-    if (style == _playStyle) return;
-    setState(() => _playStyle = style);
+  Future<void> _setPlayStyle(Game game, PlayStyle style) async {
+    if (style == game.playStyle.toPlayStyle) return;
     await _withSaving(
-      () => ref.read(gameActionsProvider).setPlayStyle(widget.game, style),
+      () => ref.read(gameActionsProvider).setPlayStyle(game, style),
     );
+  }
+
+  Future<void> _commitRating(Game game, double value) async {
+    final rating = value == 0 ? null : value.toInt();
+    try {
+      await ref.read(gameActionsProvider).setRating(game, rating);
+    } finally {
+      if (mounted) setState(() => _draftRating = null);
+    }
   }
 
   Future<void> _showPlaytimeDialog(BuildContext context, Game game) async {
@@ -547,7 +558,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               icon: Icons.check_circle_outline,
             ),
           ],
-          selected: _status,
+          selected: game.status.toGameStatus,
           onChanged: _saving ? null : (s) => _setStatus(game, s),
         ),
       ],
@@ -578,8 +589,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
               enabled: game.completionistHours != null,
             ),
           ],
-          selected: _playStyle,
-          onChanged: _saving ? null : _setPlayStyle,
+          selected: game.playStyle.toPlayStyle,
+          onChanged: _saving ? null : (s) => _setPlayStyle(game, s),
         ),
       ],
     );
@@ -659,6 +670,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     ColorScheme colors,
   ) {
     final tt = Theme.of(context).textTheme;
+    // What the slider currently shows: the drag position, else the saved value.
+    final shownRating = _draftRating != null
+        ? (_draftRating == 0 ? null : _draftRating!.toInt())
+        : game.rating;
     // TODO: use isMobile to size the slider thumb or change number of columns
     // ignore: unused_local_variable
     final isMobile = context.isMobileOS;
@@ -679,10 +694,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 const SizedBox(width: 8),
                 Expanded(child: Text('Rating', style: tt.titleSmall)),
                 Text(
-                  game.rating != null ? '${game.rating}/10' : 'Not set',
+                  shownRating != null ? '$shownRating/10' : 'Not set',
                   style: tt.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: game.rating != null
+                    color: shownRating != null
                         ? colors.primary
                         : colors.onSurfaceVariant,
                   ),
@@ -697,17 +712,15 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
               ),
               child: Slider(
-                value: (game.rating?.toDouble() ?? 0),
+                value: _draftRating ?? (game.rating?.toDouble() ?? 0),
                 min: 0,
                 max: 10,
                 divisions: 10,
-                onChanged: _saving
-                    ? null
-                    : (val) => _withSaving(
-                        () => ref
-                            .read(gameActionsProvider)
-                            .setRating(game, val == 0 ? null : val.toInt()),
-                      ),
+                label: shownRating == null ? 'Not set' : '$shownRating',
+                // Stays live while another save is in flight, so the final
+                // position is never dropped.
+                onChanged: (val) => setState(() => _draftRating = val),
+                onChangeEnd: (val) => _commitRating(game, val),
               ),
             ),
           ],

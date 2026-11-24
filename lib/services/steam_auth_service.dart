@@ -13,6 +13,12 @@ class SteamAuthService {
 
   HttpServer? _server;
 
+  /// The `openid.return_to` of the login URL this instance built. Steam signs
+  /// it into the response, and [extractAndVerifySteamId] refuses a response
+  /// whose return_to differs: otherwise an assertion Steam issued for some
+  /// other site's login could be handed to the app.
+  String? _expectedReturnTo;
+
   /// Login URL for the mobile flow, where Steam redirects to the backend
   /// rather than a loopback server. The backend forwards the OpenID params on
   /// to `[callbackScheme]://auth`, which ends the auth session.
@@ -23,6 +29,7 @@ class SteamAuthService {
     final base = backendUrl.endsWith('/')
         ? backendUrl.substring(0, backendUrl.length - 1)
         : backendUrl;
+    _expectedReturnTo = '$base/auth/steam/callback';
     return Uri.parse(_steamLogin).replace(
       queryParameters: {
         'openid.ns': _openIdNs,
@@ -43,6 +50,7 @@ class SteamAuthService {
     // SocketException on Android.
     _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final port = _server!.port;
+    _expectedReturnTo = 'http://127.0.0.1:$port/auth';
     return Uri.parse(_steamLogin).replace(
       queryParameters: {
         'openid.ns': 'http://specs.openid.net/auth/2.0',
@@ -85,11 +93,17 @@ class SteamAuthService {
   }
 
   /// Verifies the Steam OpenID response signature via check_authentication,
-  /// then extracts and returns the Steam ID. Returns null if invalid.
+  /// then extracts and returns the Steam ID. Returns null if invalid, or if the
+  /// response was not issued for this instance's own login URL.
   Future<String?> extractAndVerifySteamId(Uri redirect) async {
     const prefix = 'https://steamcommunity.com/openid/id/';
     final claimedId = redirect.queryParameters['openid.claimed_id'];
     if (claimedId == null || !claimedId.startsWith(prefix)) return null;
+    final expected = _expectedReturnTo;
+    if (expected == null ||
+        redirect.queryParameters['openid.return_to'] != expected) {
+      return null;
+    }
 
     // Ask Steam to confirm the signed response is authentic.
     final params = Map<String, String>.from(redirect.queryParameters);

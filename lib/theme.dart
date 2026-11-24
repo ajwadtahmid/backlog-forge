@@ -32,7 +32,6 @@ Color playingTextColor(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark
         ? kColorPlaying
         : const Color(0xFF1B6B47);
-const kColorProgressLo = Color(0xFF6C4DF6);
 const kColorProgressMid = Color(0xFFFFB74D);
 const kColorProgressHi = Color(0xFF4CAF82);
 

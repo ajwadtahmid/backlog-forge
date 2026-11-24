@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:backlogforge/screens/tabs/game_list_tab_shared.dart';
@@ -98,5 +99,24 @@ void main() {
         expect(box.color, entry.value.colorScheme.surfaceContainerHighest);
       });
     }
+  });
+
+  testWidgets('list thumbnails are decoded at display size, not full size',
+      (tester) async {
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: Column(children: [
+          ArtworkImage(url: 'https://example.invalid/a.jpg', width: 96, height: 54),
+          ArtworkImage(url: 'https://example.invalid/b.jpg'),
+        ]),
+      ),
+    ));
+    final images = tester
+        .widgetList<CachedNetworkImage>(find.byType(CachedNetworkImage))
+        .toList();
+    expect(images[0].memCacheWidth, 192); // 96 dp * 2.0
+    expect(images[1].memCacheWidth, isNull); // no width given: full size
   });
 }
