@@ -7,6 +7,7 @@ import 'package:backlogforge/providers/database_provider.dart';
 import 'package:backlogforge/providers/settings_provider.dart';
 import 'package:backlogforge/providers/theme_provider.dart';
 import 'package:backlogforge/services/database/app_database.dart';
+import 'package:backlogforge/theme.dart';
 
 const _me = 'guest_user';
 const _other = 'someone_else';
@@ -29,6 +30,7 @@ void main() {
       'completed_sort': 'highestRated',
       'backlog_length_filter': 'short',
       'quarter_goal': 5,
+      'font': 'inter',
       'hltb.bootstrap.v1': '{"token":"x"}',
     });
     prefs = await SharedPreferences.getInstance();
@@ -84,6 +86,16 @@ void main() {
     expect(prefs.getString('nav_position'), isNull);
     expect(prefs.getInt('quarter_goal'), isNull);
     expect(prefs.getString('hltb.bootstrap.v1'), '{"token":"x"}');
+  });
+
+  test('the font and theme go back to the defaults', () async {
+    await seedUser();
+    expect(container.read(appFontProvider), AppFont.inter);
+
+    await container.read(clearAllDataProvider)(_me);
+
+    expect(prefs.getString('font'), isNull);
+    expect(container.read(appFontProvider), AppFont.spaceGrotesk);
   });
 
   test('providers read the defaults again afterwards', () async {

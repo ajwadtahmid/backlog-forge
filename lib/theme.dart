@@ -1,5 +1,4 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'constants.dart';
 
 // Brand accent — electric indigo, gaming-forward
@@ -34,11 +33,30 @@ const kColorProgressHi = Color(0xFF4CAF82);
 const kColorGradeB = Color(0xFF26A69A); // teal
 const kColorGradeD = Color(0xFFFF8A65); // soft orange
 
-TextTheme _buildTextTheme(Brightness brightness) {
+/// The typefaces the user can pick in Settings → Appearance. The first three
+/// are bundled with the app (assets/fonts); [system] uses the platform font.
+enum AppFont {
+  spaceGrotesk('Space Grotesk', 'SpaceGrotesk'),
+  inter('Inter', 'Inter'),
+  jetBrainsMono('JetBrains Mono', 'JetBrainsMono'),
+  system('System', null);
+
+  const AppFont(this.label, this.family);
+  final String label;
+
+  /// Font family name as declared in pubspec.yaml; null = platform default.
+  final String? family;
+
+  /// New installs and "Clear All Data" go back to this one.
+  static const defaultFont = AppFont.spaceGrotesk;
+}
+
+TextTheme _buildTextTheme(Brightness brightness, AppFont font) {
   final base = brightness == Brightness.dark
       ? ThemeData.dark().textTheme
       : ThemeData.light().textTheme;
-  return GoogleFonts.spaceGroteskTextTheme(base);
+  final family = font.family;
+  return family == null ? base : base.apply(fontFamily: family);
 }
 
 ColorScheme _darkColorScheme() {
@@ -75,8 +93,8 @@ ColorScheme _lightColorScheme() {
   );
 }
 
-ThemeData _buildTheme(ColorScheme cs) {
-  final textTheme = _buildTextTheme(cs.brightness);
+ThemeData _buildTheme(ColorScheme cs, AppFont font) {
+  final textTheme = _buildTextTheme(cs.brightness, font);
 
   return ThemeData(
     useMaterial3: true,
@@ -196,8 +214,8 @@ ThemeData _buildTheme(ColorScheme cs) {
   );
 }
 
-final lightTheme = _buildTheme(_lightColorScheme());
-final darkTheme  = _buildTheme(_darkColorScheme());
+ThemeData lightThemeFor(AppFont font) => _buildTheme(_lightColorScheme(), font);
+ThemeData darkThemeFor(AppFont font) => _buildTheme(_darkColorScheme(), font);
 
 /// Returns a progress-bar color that shifts primary → amber → green as
 /// completion approaches 100%.

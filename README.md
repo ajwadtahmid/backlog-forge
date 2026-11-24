@@ -210,6 +210,8 @@ cd backend/worker && npm test                    # Worker tests
 - **No login, no account.** Steam sign-in happens on Steam's own page; BacklogForge never sees your password.
 - **Steam ID.** It is stored on your device and sent to the BacklogForge backend only to fetch your public game library from Steam. The backend does not store it.
 - **HowLongToBeat.** Game titles are sent directly from your device to howlongtobeat.com to look up completion times, so HowLongToBeat sees your IP address like any website would. These requests do not pass through the BacklogForge backend.
+- **Artwork.** Cover images are loaded directly from Steam's content delivery network (`cdn.akamai.steamstatic.com`) and from HowLongToBeat's image hosts, so those servers see your IP address and the game each image belongs to. Images are cached on the device after the first load.
+- **Fonts.** Space Grotesk, Inter and JetBrains Mono are bundled with the app (SIL Open Font License); nothing is downloaded from Google Fonts.
 - **No analytics or tracking.** The app contains no analytics, advertising or tracking SDKs.
 - **Local-only storage.** All game data, notes, ratings, and settings are stored on-device in SQLite.
 

@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/database/app_database.dart';
+import '../theme.dart' show AppFont;
 import 'database_provider.dart';
 import 'auth_provider.dart';
 
 const _kThemeKey = 'theme';
 const _kNavPositionKey = 'nav_position';
+const _kFontKey = 'font';
 
 enum NavigationPosition { top, left, right }
 
@@ -26,8 +28,9 @@ class ThemeNotifier extends Notifier<ThemeMode> {
     final raw = ref.read(sharedPrefsProvider).getString(_kThemeKey);
     if (raw == null) {
       // No cached value yet — sync from DB after auth resolves.
+      // New installs start dark; the DB row (default 'dark') confirms it.
       Future.microtask(_syncFromDb);
-      return ThemeMode.system;
+      return ThemeMode.dark;
     }
     return _decode(raw);
   }
@@ -104,3 +107,23 @@ class NavigationPositionNotifier extends Notifier<NavigationPosition> {
 final navigationPositionProvider =
     NotifierProvider<NavigationPositionNotifier, NavigationPosition>(
         NavigationPositionNotifier.new);
+
+/// The chosen typeface. Stored in [SharedPreferences] only (a display
+/// preference, read synchronously before the first frame). New installs and
+/// unknown values fall back to [AppFont.defaultFont].
+class AppFontNotifier extends Notifier<AppFont> {
+  @override
+  AppFont build() {
+    final raw = ref.read(sharedPrefsProvider).getString(_kFontKey);
+    return AppFont.values.where((f) => f.name == raw).firstOrNull ??
+        AppFont.defaultFont;
+  }
+
+  Future<void> setFont(AppFont font) async {
+    state = font;
+    await ref.read(sharedPrefsProvider).setString(_kFontKey, font.name);
+  }
+}
+
+final appFontProvider =
+    NotifierProvider<AppFontNotifier, AppFont>(AppFontNotifier.new);

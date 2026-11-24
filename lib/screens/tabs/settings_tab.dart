@@ -8,6 +8,7 @@ import '../../providers/library_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../util/platform.dart';
 import '../../providers/theme_provider.dart';
+import '../../theme.dart' show AppFont;
 import '../../services/export_import_service.dart';
 import '../onboarding_screen.dart';
 
@@ -22,6 +23,7 @@ class SettingsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authAsync = ref.watch(authProvider);
     final themeMode = ref.watch(themeProvider);
+    final font = ref.watch(appFontProvider);
     final syncState = ref.watch(syncStateProvider);
     final isGuest = authAsync.asData?.value.steamId == AuthNotifier.guestSteamId;
     final settingsAsync = ref.watch(settingsStreamProvider);
@@ -161,6 +163,18 @@ class SettingsTab extends ConsumerWidget {
                   selected: {themeMode},
                   onSelectionChanged: (s) =>
                       ref.read(themeProvider.notifier).setTheme(s.first),
+                ),
+              ),
+              const Divider(height: 1),
+              _SettingRow(
+                icon: Icons.text_fields,
+                title: 'Font',
+                subtitle: font.label,
+                button: _FontPicker(
+                  width: context.isMobileOS ? null : 220,
+                  selected: font,
+                  onChanged: (f) =>
+                      ref.read(appFontProvider.notifier).setFont(f),
                 ),
               ),
               if (!context.isMobileOS) ...[
@@ -494,6 +508,52 @@ class SettingsTab extends ConsumerWidget {
 
 /// A settings row that renders inline (icon + text + button) on desktop,
 /// and stacked (icon + text above, full-width button below) on mobile.
+/// Drop-down of the available fonts; each entry is drawn in its own typeface
+/// so the choice previews itself.
+class _FontPicker extends StatelessWidget {
+  const _FontPicker({
+    required this.selected,
+    required this.onChanged,
+    this.width,
+  });
+
+  /// Fixed width where the row gives no bounds (desktop); null = fill.
+  final double? width;
+
+  final AppFont selected;
+  final ValueChanged<AppFont> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border.all(color: cs.outline),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<AppFont>(
+          value: selected,
+          isExpanded: true,
+          borderRadius: BorderRadius.circular(16),
+          items: [
+            for (final f in AppFont.values)
+              DropdownMenuItem(
+                value: f,
+                child: Text(f.label, style: TextStyle(fontFamily: f.family)),
+              ),
+          ],
+          onChanged: (f) {
+            if (f != null) onChanged(f);
+          },
+        ),
+      ),
+    );
+  }
+}
+
 class _SettingRow extends StatelessWidget {
   const _SettingRow({
     required this.icon,

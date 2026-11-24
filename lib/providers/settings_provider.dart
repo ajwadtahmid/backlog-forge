@@ -32,6 +32,7 @@ final clearAllDataProvider =
     }
     ref
       ..invalidate(themeProvider)
+      ..invalidate(appFontProvider)
       ..invalidate(navigationPositionProvider)
       ..invalidate(quarterGoalProvider)
       ..invalidate(backlogSortModeProvider)
