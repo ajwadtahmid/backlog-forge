@@ -33,6 +33,28 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
   late PlayStyle _playStyle;
   bool _saving = false;
 
+  /// True once the artwork header has scrolled up under the toolbar. The
+  /// toolbar is see-through over the artwork, but must turn opaque (and name
+  /// the game) when content scrolls beneath it, or the back button sits on
+  /// top of the section labels.
+  final _scroll = ScrollController();
+  bool _toolbarSolid = false;
+
+  void _onScroll() {
+    final solid = _scroll.hasClients &&
+        _scroll.offset >
+            AppConstants.kDetailHeaderHeight -
+                kToolbarHeight -
+                MediaQuery.paddingOf(context).top;
+    if (solid != _toolbarSolid) setState(() => _toolbarSolid = solid);
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
   Future<void> _withSaving(Future<void> Function() action) async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -48,6 +70,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     super.initState();
     _status = widget.game.status.toGameStatus;
     _playStyle = widget.game.playStyle.toPlayStyle;
+    _scroll.addListener(_onScroll);
   }
 
   double? _targetHours(Game game) => resolveTargetHours(game, _playStyle);
@@ -193,9 +216,12 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: _toolbarSolid ? scaffoldBg : Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
+        title: _toolbarSolid
+            ? Text(game.name, maxLines: 1, overflow: TextOverflow.ellipsis)
+            : null,
         leading: Padding(
           padding: const EdgeInsets.all(8),
           child: DecoratedBox(
@@ -211,6 +237,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         ),
       ),
       body: CustomScrollView(
+        controller: _scroll,
         slivers: _buildSlivers(
           context,
           game: game,
@@ -276,22 +303,33 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
                 ),
               ),
             ),
-            Positioned(
-              bottom: AppConstants.kArtworkTitlePadding,
-              left: AppConstants.kArtworkTitlePadding,
-              right: AppConstants.kArtworkTitlePadding,
-              child: Text(
-                game.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: kDetailTitleSize,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(blurRadius: 4, color: Colors.black87),
-                    Shadow(blurRadius: 16, color: Colors.black54),
-                  ],
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(maxWidth: kMaxContentWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.all(
+                        AppConstants.kArtworkTitlePadding),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Text(
+                        game.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: kDetailTitleSize,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(blurRadius: 4, color: Colors.black87),
+                            Shadow(blurRadius: 16, color: Colors.black54),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -312,7 +350,10 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     required double dailyBudget,
   }) {
     return SliverToBoxAdapter(
-      child: Padding(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
+          child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,6 +382,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
             _divider(colors),
             _buildNotesSection(context, game),
           ],
+        ),
+      ),
         ),
       ),
     );
@@ -405,8 +448,8 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         Row(
           children: [
             Expanded(
-              child: RichText(
-                text: TextSpan(
+              child: Text.rich(
+                TextSpan(
                   children: [
                     TextSpan(
                       text: 'TIME TO BEAT',
@@ -449,36 +492,26 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
         ),
         const SizedBox(height: 10),
         if (hasHltb)
-          Row(
-            children: [
+          HltbChipRow(
+            chips: [
               if (game.essentialHours != null)
-                Expanded(
-                  child: HltbChip(
-                    label: 'Essential',
-                    hours: game.essentialHours!,
-                    color: colors.primary,
-                  ),
+                HltbChip(
+                  label: 'Essential',
+                  hours: game.essentialHours!,
+                  color: colors.primary,
                 ),
-              if (game.extendedHours != null) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: HltbChip(
-                    label: 'Extended',
-                    hours: game.extendedHours!,
-                    color: colors.secondary,
-                  ),
+              if (game.extendedHours != null)
+                HltbChip(
+                  label: 'Extended',
+                  hours: game.extendedHours!,
+                  color: colors.secondary,
                 ),
-              ],
-              if (game.completionistHours != null) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: HltbChip(
-                    label: 'Completionist',
-                    hours: game.completionistHours!,
-                    color: colors.tertiary,
-                  ),
+              if (game.completionistHours != null)
+                HltbChip(
+                  label: 'Completionist',
+                  hours: game.completionistHours!,
+                  color: colors.tertiary,
                 ),
-              ],
             ],
           )
         else

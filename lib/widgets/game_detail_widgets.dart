@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../util/text_scale.dart';
 import '../util/ui_tokens.dart';
 
 // ── Rating row ────────────────────────────────────────────────────────────────
@@ -127,8 +128,10 @@ class ToggleRow<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Row(
-      children: options.map((opt) {
+    // Three side-by-side options only fit at normal text sizes; with a large
+    // font they stack, full width, with the icon beside the label.
+    final stacked = isLargeText(context);
+    final tiles = options.map((opt) {
         final isSelected = opt.value == selected;
         final isDisabled = onChanged == null;
         final canTap = opt.enabled && !isDisabled;
@@ -138,9 +141,10 @@ class ToggleRow<T> extends StatelessWidget {
                 ? colors.onSurface
                 : colors.onSurface.withValues(alpha: 0.35);
 
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+        final tile = Padding(
+            padding: stacked
+                ? const EdgeInsets.symmetric(vertical: 4)
+                : const EdgeInsets.symmetric(horizontal: 4),
             child: AnimatedContainer(
               duration: kAnimNormal,
               curve: Curves.easeInOut,
@@ -164,23 +168,29 @@ class ToggleRow<T> extends StatelessWidget {
                   onTap: canTap ? () => onChanged!(opt.value) : null,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    child: Column(
+                    child: Flex(
+                      direction: stacked ? Axis.horizontal : Axis.vertical,
                       mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (opt.icon != null) ...[
                           Icon(opt.icon, size: 20, color: fgColor),
-                          const SizedBox(height: 5),
+                          SizedBox(
+                              width: stacked ? 10 : 0,
+                              height: stacked ? 0 : 5),
                         ],
-                        Text(
-                          opt.label,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                            color: fgColor,
+                        Flexible(
+                          child: Text(
+                            opt.label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: fgColor,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
@@ -188,10 +198,15 @@ class ToggleRow<T> extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        );
-      }).toList(),
-    );
+          );
+        return stacked ? tile : Expanded(child: tile);
+      }).toList();
+    return stacked
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: tiles,
+          )
+        : Row(children: tiles);
   }
 }
 
@@ -259,6 +274,36 @@ class SectionLabel extends StatelessWidget {
         letterSpacing: 1.2,
         color: Theme.of(context).colorScheme.primary,
       ),
+    );
+  }
+}
+
+/// The Essential / Extended / Completionist chips: side by side at normal text
+/// sizes, stacked when a large font would clip the labels.
+class HltbChipRow extends StatelessWidget {
+  const HltbChipRow({super.key, required this.chips});
+  final List<Widget> chips;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLargeText(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < chips.length; i++) ...[
+            if (i > 0) const SizedBox(height: 8),
+            chips[i],
+          ],
+        ],
+      );
+    }
+    return Row(
+      children: [
+        for (var i = 0; i < chips.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(child: chips[i]),
+        ],
+      ],
     );
   }
 }

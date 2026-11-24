@@ -20,3 +20,9 @@ const kArtworkSearchH = 40.0;
 
 /// Hero title overlaid on the detail-screen artwork header.
 const kDetailTitleSize = 22.0;
+
+// ── Layout ────────────────────────────────────────────────────────────────────
+
+/// Widest the list, stats, settings and detail content gets. On tablets and
+/// desktop windows it is centred instead of stretching rows across the screen.
+const kMaxContentWidth = 720.0;

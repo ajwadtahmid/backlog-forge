@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/library_provider.dart';
 import '../providers/theme_provider.dart';
 import '../util/platform.dart';
+import '../util/text_scale.dart';
 import 'tabs/backlog_tab.dart';
 import 'tabs/completed_tab.dart';
 import 'tabs/play_next_tab.dart';
@@ -92,13 +93,40 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         children: [
           if (showRailLeft)
             _buildRail(),
-          Expanded(child: body),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(maxWidth: kMaxContentWidth),
+                child: body,
+              ),
+            ),
+          ),
           if (showRailRight)
             _buildRail(),
         ],
       ),
       bottomNavigationBar: !isDesktop
-          ? NavigationBar(
+          ? _buildNavBar(context)
+          : null,
+    );
+  }
+
+  /// Five labelled destinations fit one phone width only at normal text sizes.
+  /// With a large font setting the labels would break mid-word ("Complet|ed"),
+  /// so the nav bar keeps its own text at normal size and shows just the
+  /// selected label; the icons stay and every destination keeps its tooltip
+  /// and screen-reader label.
+  Widget _buildNavBar(BuildContext context) {
+    final large = isLargeText(context);
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: large ? TextScaler.noScaling : null,
+      ),
+      child: NavigationBar(
+        labelBehavior: large
+            ? NavigationDestinationLabelBehavior.onlyShowSelected
+            : NavigationDestinationLabelBehavior.alwaysShow,
               selectedIndex: _selectedIndex,
               onDestinationSelected: (i) =>
                   setState(() => _selectedIndex = i),
@@ -109,8 +137,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         label: d.label,
                       ))
                   .toList(),
-            )
-          : null,
+      ),
     );
   }
 

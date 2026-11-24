@@ -10,6 +10,7 @@ import '../providers/game_actions_provider.dart';
 import '../providers/daily_budget_provider.dart';
 import '../theme.dart';
 import '../util/date_format.dart';
+import '../util/text_scale.dart';
 import '../util/ui_tokens.dart';
 import 'artwork_image.dart';
 
@@ -204,42 +205,7 @@ class _GameCardState extends ConsumerState<GameCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                game.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: tt.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            if (isPlaying)
-                              Container(
-                                margin: const EdgeInsets.only(left: 6),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: kColorPlayingBg,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                      color: kColorPlaying.withValues(alpha: 0.4),
-                                      width: 0.5),
-                                ),
-                                child: const Text(
-                                  'Playing',
-                                  style: TextStyle(
-                                    color: kColorPlaying,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                        _titleLine(context, tt, isPlaying),
                         const SizedBox(height: 4),
                         Text(
                           _playtimeLabel(hoursPlayed, target),
@@ -277,6 +243,45 @@ class _GameCardState extends ConsumerState<GameCard> {
           ),
         ),
     );
+  }
+
+  /// Title plus the "Playing" badge. Side by side normally; with a large font
+  /// the badge would squeeze the title down to a few letters, so it drops
+  /// below a title that may then use up to three lines.
+  Widget _titleLine(BuildContext context, TextTheme tt, bool isPlaying) {
+    final large = isLargeText(context);
+    final title = Text(
+      game.name,
+      maxLines: large ? 3 : 1,
+      overflow: TextOverflow.ellipsis,
+      style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+    );
+    final badge = Container(
+      margin: EdgeInsets.only(left: large ? 0 : 6, top: large ? 4 : 0),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: kColorPlayingBg,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+            color: kColorPlaying.withValues(alpha: 0.4), width: 0.5),
+      ),
+      child: const Text(
+        'Playing',
+        style: TextStyle(
+          color: kColorPlaying,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+    if (large) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [title, if (isPlaying) badge],
+      );
+    }
+    return Row(children: [Expanded(child: title), if (isPlaying) badge]);
   }
 
   String _playtimeLabel(double hoursPlayed, double? target) {
