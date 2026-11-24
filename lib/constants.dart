@@ -1,5 +1,18 @@
 /// App-wide constants. Centralised here so a single change propagates everywhere.
 abstract final class AppConstants {
+  // ── Import sanity limits ────────────────────────────────────────────────────
+  /// Lowest and highest personal rating; anything else in an import is dropped.
+  static const kMinRating = 1;
+  static const kMaxRating = 10;
+
+  /// Upper bound for imported play time (100,000 hours). Larger or negative
+  /// values come from a corrupt or hand-edited file.
+  static const kMaxPlaytimeMinutes = 6000000;
+
+  /// Upper bound for imported time-to-beat hours. Zero and negative values are
+  /// dropped too: a zero target would mark every game completed.
+  static const kMaxHltbHours = 10000.0;
+
   // ── Network timeouts ────────────────────────────────────────────────────────
   /// Timeout for each request to howlongtobeat.com (made from the device).
   static const kHltbTimeout = Duration(seconds: 15);

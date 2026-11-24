@@ -37,6 +37,15 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => schemaVersionNumber;
 
+  /// Deletes every game for [steamId] and puts that user's settings back to
+  /// their defaults. One transaction, so a failure leaves nothing half-cleared.
+  Future<void> clearAllUserData(String steamId) => transaction(() async {
+        await (delete(games)..where((g) => g.steamId.equals(steamId))).go();
+        await (delete(appSettings)..where((s) => s.steamId.equals(steamId)))
+            .go();
+        await settingsDao.seedIfAbsent(steamId);
+      });
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {

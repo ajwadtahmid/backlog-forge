@@ -390,8 +390,16 @@ class SettingsTab extends ConsumerWidget {
               _PreviewRow(icon: Icons.add_circle_outline,
                   label: '$toAdd new game${toAdd == 1 ? '' : 's'} will be added'),
               const SizedBox(height: 6),
-              _PreviewRow(icon: Icons.update,
-                  label: '$toUpdate existing game${toUpdate == 1 ? '' : 's'} will be updated'),
+              _PreviewRow(icon: Icons.merge_type,
+                  label: '$toUpdate existing game${toUpdate == 1 ? '' : 's'} will be merged'),
+              if (toUpdate > 0) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Notes, ratings and dates you already have are kept unless the file has its own.',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(ctx).colorScheme.onSurfaceVariant),
+                ),
+              ],
               const SizedBox(height: 12),
               Text('Total in file: ${companions.length}',
                   style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
@@ -466,15 +474,8 @@ class SettingsTab extends ConsumerWidget {
     if (confirmed != true || !context.mounted) return;
 
     try {
-      final db = ref.read(databaseProvider);
-      final games = await db.gamesDao.getAllGames(steamId);
-
-      // Delete all games for this user
-      await db.transaction(() async {
-        for (final game in games) {
-          await (db.delete(db.games)..where((g) => g.id.equals(game.id))).go();
-        }
-      });
+      // Games, settings row and every saved preference, in one go.
+      await ref.read(clearAllDataProvider)(steamId);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

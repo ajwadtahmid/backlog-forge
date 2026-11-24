@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:drift/drift.dart';
+import '../constants.dart';
 import 'database/app_database.dart';
 import '../models/game_status.dart';
 import '../models/play_style.dart';
@@ -98,7 +99,29 @@ class ExportImportService {
     return value;
   }
 
+  /// Time-to-beat hours from a file; null unless a plausible positive number.
+  static double? _validHours(Object? raw) {
+    final v = (raw as num?)?.toDouble();
+    if (v == null || !v.isFinite || v <= 0 || v > AppConstants.kMaxHltbHours) {
+      return null;
+    }
+    return v;
+  }
+
+  /// Rating from a file; null unless inside the 1–10 range the UI offers.
+  static int? _validRating(Object? raw) {
+    final v = (raw as num?)?.toInt();
+    if (v == null || v < AppConstants.kMinRating || v > AppConstants.kMaxRating) {
+      return null;
+    }
+    return v;
+  }
+
   /// Parses a JSON export string produced by [buildExportJson].
+  ///
+  /// Values that cannot be right (a rating of 47, negative play time, zero or
+  /// negative hours) are dropped or clamped here, the one place untrusted data
+  /// enters the app. Entries that cannot be read at all are skipped.
   static List<GamesCompanion> parseImportJson(String content) {
     final data = jsonDecode(content) as Map<String, dynamic>;
 
@@ -113,6 +136,9 @@ class ExportImportService {
       try {
         final g = raw as Map<String, dynamic>;
 
+        final name = (g['name'] as String).trim();
+        if (name.isEmpty) throw const FormatException('empty name');
+
         final rawStatus = g['status'] as String?;
         final status = rawStatus != null && validStatuses.contains(rawStatus)
             ? rawStatus
@@ -126,13 +152,14 @@ class ExportImportService {
 
         return GamesCompanion(
           appId: Value(g['appId'] as int),
-          name: Value(g['name'] as String),
-          playtimeMinutes: Value((g['playtimeMinutes'] as num?)?.toInt() ?? 0),
+          name: Value(name),
+          playtimeMinutes: Value(
+              ((g['playtimeMinutes'] as num?)?.toInt() ?? 0)
+                  .clamp(0, AppConstants.kMaxPlaytimeMinutes)),
           status: Value(status),
-          essentialHours: Value((g['essentialHours'] as num?)?.toDouble()),
-          extendedHours: Value((g['extendedHours'] as num?)?.toDouble()),
-          completionistHours:
-              Value((g['completionistHours'] as num?)?.toDouble()),
+          essentialHours: Value(_validHours(g['essentialHours'])),
+          extendedHours: Value(_validHours(g['extendedHours'])),
+          completionistHours: Value(_validHours(g['completionistHours'])),
           hltbName: Value(g['hltbName'] as String?),
           hltbImageUrl: Value(g['hltbImageUrl'] as String?),
           // Absent in exports made before schema 13 — defaults keep them valid.
@@ -148,7 +175,7 @@ class ExportImportService {
               ? DateTime.parse(g['lastPlayedAt'] as String)
               : null),
           notes: Value(g['notes'] as String?),
-          rating: Value((g['rating'] as num?)?.toInt()),
+          rating: Value(_validRating(g['rating'])),
         );
       } catch (e) {
         AppLogger.instance.warning('Skipped malformed game entry during import: $e');

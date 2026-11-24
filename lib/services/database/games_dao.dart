@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'app_database.dart';
 import 'tables.dart';
 import '../../constants.dart';
+import '../import_merge.dart';
 import '../status_calculator.dart';
 import '../../models/time_to_beat.dart';
 import '../../models/game_status.dart';
@@ -256,23 +257,42 @@ class GamesDao extends DatabaseAccessor<AppDatabase> with _$GamesDaoMixin {
     );
   }
 
-  /// Upserts a list of games from a JSON import, replacing any existing row
-  /// with the same (steamId, appId) pair so a backup restore is idempotent.
+  /// Imports games from a JSON file, merging each into the copy already in the
+  /// library when the (steamId, appId) pair matches (see [mergeImportedGame])
+  /// and inserting it otherwise. Updating in place keeps the row `id` stable and
+  /// keeps notes, ratings and overrides the file does not carry, so importing a
+  /// backup twice, or an older backup over newer data, loses nothing.
   ///
-  /// Note: `insertOrReplace` deletes and re-inserts matching rows, so the
-  /// autoincrement `id` column will be reassigned. This is safe today because
-  /// no cross-table foreign keys reference `id`, but a future feature that
-  /// stores stable game references should use a stable key (e.g. `appId`)
-  /// rather than the row `id`.
+  /// Returns the number of entries processed.
   Future<int> importGames(
       String steamId, List<GamesCompanion> companions) async {
-    int count = 0;
+    final local = {for (final g in await getAllGames(steamId)) g.appId: g};
+    // An app id that appears twice in one file must merge onto the row the
+    // first occurrence wrote, so those rows are re-read after each write.
+    final seen = <int>{};
+    final repeated = {
+      for (final c in companions)
+        if (!seen.add(c.appId.value)) c.appId.value,
+    };
+    var count = 0;
     await db.transaction(() async {
       for (final c in companions) {
-        await into(games).insert(
-          c.copyWith(steamId: Value(steamId)),
-          mode: InsertMode.insertOrReplace,
-        );
+        final appId = c.appId.value;
+        final existing = local[appId];
+        final int rowId;
+        if (existing == null) {
+          rowId = await into(games)
+              .insert(c.copyWith(steamId: Value(steamId)));
+        } else {
+          rowId = existing.id;
+          await (update(games)..where((g) => g.id.equals(rowId)))
+              .write(mergeImportedGame(existing, c));
+        }
+        if (repeated.contains(appId)) {
+          local[appId] = await (select(games)
+                ..where((g) => g.id.equals(rowId)))
+              .getSingle();
+        }
         count++;
       }
     });
