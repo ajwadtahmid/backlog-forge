@@ -160,8 +160,13 @@ class SyncNotifier extends Notifier<SyncState> {
     final pending = hltbResult.failed + hltbResult.deferred;
     if (pending > 0) {
       final s = pending == 1 ? 'game' : 'games';
-      parts.add('Couldn\'t get HLTB data for $pending $s right now — '
-          'they will be retried on the next sync.');
+      final offline = hltbResult.networkFailed > 0 &&
+          hltbResult.networkFailed == hltbResult.failed;
+      parts.add(offline
+          ? 'No internet connection — HLTB data for $pending $s is missing. '
+              'They will be retried on the next sync.'
+          : 'Couldn\'t get HLTB data for $pending $s right now — '
+              'they will be retried on the next sync.');
     }
     return parts.isEmpty ? null : parts.join('\n');
   }

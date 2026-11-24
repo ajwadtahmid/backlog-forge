@@ -69,9 +69,16 @@ void main() {
       listEmits = 0;
       final target = all.where((g) => g.essentialHours == null).take(200).toList();
       sw = Stopwatch()..start();
-      for (final g in target) {
-        await db.gamesDao
-            .updateHltbData(g.id, TimeToBeat(essentialHours: 7, hltbName: 'x', hltbGameId: 1));
+      // The sync service saves results in batches of 25 (HltbSyncService.batchSize).
+      for (var i = 0; i < target.length; i += 25) {
+        await db.gamesDao.saveHltbResults([
+          for (final g in target.skip(i).take(25))
+            (
+              id: g.id,
+              data: TimeToBeat(
+                  essentialHours: 7, hltbName: 'x', hltbGameId: 1),
+            ),
+        ]);
       }
       out['200_hltb_writes_ms_$n'] = _ms(sw);
       await Future<void>.delayed(const Duration(seconds: 2));

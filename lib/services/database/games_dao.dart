@@ -79,6 +79,24 @@ class GamesDao extends DatabaseAccessor<AppDatabase> with _$GamesDaoMixin {
     );
   }
 
+  /// Saves many HLTB answers in one transaction, so list streams re-run their
+  /// queries once for the whole batch. A null [TimeToBeat] is a definitive
+  /// "not on HLTB" (only the attempt stamp is written).
+  Future<void> saveHltbResults(
+      List<({int id, TimeToBeat? data})> results) async {
+    if (results.isEmpty) return;
+    await db.transaction(() async {
+      for (final r in results) {
+        final data = r.data;
+        if (data == null) {
+          await markHltbNoMatch(r.id);
+        } else {
+          await updateHltbData(r.id, data);
+        }
+      }
+    });
+  }
+
   /// Records a definitive "not on HLTB" answer so the retry window applies.
   /// Do NOT call this for network or rate-limit failures — those should be
   /// retried on the next sync.

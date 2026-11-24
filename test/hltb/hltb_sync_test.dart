@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -89,7 +90,7 @@ void main() {
     final id = await _insert(db, appId: 620, name: 'Portal 2');
     final result = await runSync(_ScriptedResolver({'Portal 2': _ttb(7231)}));
 
-    expect(result, (fetched: 1, noMatch: 0, failed: 0, deferred: 0));
+    expect(result, (fetched: 1, noMatch: 0, failed: 0, networkFailed: 0, deferred: 0));
     final g = await _game(db, id);
     expect(g.essentialHours, 10);
     expect(g.completionistHours, 30);
@@ -129,7 +130,7 @@ void main() {
     final result = await runSync(_ScriptedResolver({
       'Busy': [const HltbRateLimitedException(), _ttb(5)],
     }));
-    expect(result, (fetched: 1, noMatch: 0, failed: 0, deferred: 0));
+    expect(result, (fetched: 1, noMatch: 0, failed: 0, networkFailed: 0, deferred: 0));
     expect(sleeps, [const Duration(seconds: 10)]);
     expect((await _game(db, id)).hltbGameId, 5);
   });
@@ -175,7 +176,115 @@ void main() {
       sleep: (d) async {},
     ).fetchAllTimeToBeat(db.gamesDao, await db.gamesDao.getAllGames(_steamId));
     // getAllGames has no ORDER BY guarantee beyond rowid; insertion order holds.
-    expect(result, (fetched: 1, noMatch: 0, failed: 8, deferred: 0));
+    expect(result, (fetched: 1, noMatch: 0, failed: 8, networkFailed: 0, deferred: 0));
+  });
+
+  test('one 429 hit by both workers costs one pause, not two', () async {
+    for (var i = 1; i <= 4; i++) {
+      await _insert(db, appId: i, name: 'G$i');
+    }
+    final result = await runSync(_ScriptedResolver({
+      'G1': [const HltbRateLimitedException(), _ttb(1)],
+      'G2': [const HltbRateLimitedException(), _ttb(2)],
+      'G3': _ttb(3),
+      'G4': _ttb(4),
+    }));
+    expect(result.fetched, 4);
+    expect(result.deferred, 0);
+    expect(sleeps, [const Duration(seconds: 10)]);
+  });
+
+  test('a persistent limit spends the budget once: 10s, 30s, 60s in total',
+      () async {
+    for (var i = 1; i <= 6; i++) {
+      await _insert(db, appId: i, name: 'G$i');
+    }
+    final result = await runSync(_ScriptedResolver({
+      for (var i = 1; i <= 6; i++) 'G$i': const HltbRateLimitedException(),
+    }));
+    expect(result.deferred, 6);
+    expect(sleeps, [
+      const Duration(seconds: 10),
+      const Duration(seconds: 30),
+      const Duration(seconds: 60),
+    ]);
+  });
+
+  test('a success refills the backoff budget', () async {
+    await _insert(db, appId: 1, name: 'A');
+    await _insert(db, appId: 2, name: 'B');
+    final result = await HltbSyncService(
+      resolve: _ScriptedResolver({
+        'A': [
+          const HltbRateLimitedException(),
+          const HltbRateLimitedException(),
+          _ttb(1)
+        ],
+        'B': [const HltbRateLimitedException(), _ttb(2)],
+      }).call,
+      concurrency: 1,
+      sleep: (d) async => sleeps.add(d),
+    ).fetchAllTimeToBeat(db.gamesDao, await db.gamesDao.getAllGames(_steamId));
+    expect(result.fetched, 2);
+    expect(sleeps, [
+      const Duration(seconds: 10),
+      const Duration(seconds: 30),
+      const Duration(seconds: 10), // budget restarted after A succeeded
+    ]);
+  });
+
+  test('results are written in batches, with the rest flushed at the end',
+      () async {
+    for (var i = 1; i <= 7; i++) {
+      await _insert(db, appId: i, name: 'G$i');
+    }
+    var emits = 0;
+    final sub = db.select(db.games).watch().listen((_) => emits++);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    emits = 0;
+    final result = await HltbSyncService(
+      resolve: _ScriptedResolver({
+        for (var i = 1; i <= 7; i++) 'G$i': i == 7 ? null : _ttb(i),
+      }).call,
+      batchSize: 3,
+      sleep: (d) async {},
+    ).fetchAllTimeToBeat(db.gamesDao, await db.gamesDao.getAllGames(_steamId));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await sub.cancel();
+
+    expect(result.fetched, 6);
+    expect(result.noMatch, 1);
+    expect(emits, lessThanOrEqualTo(3)); // 7 games in batches of 3 = 3 writes
+    final games = await db.gamesDao.getAllGames(_steamId);
+    expect(games.where((g) => g.hltbAttemptedAt != null), hasLength(7));
+    expect(games.where((g) => g.essentialHours != null), hasLength(6));
+  });
+
+  test('network errors are counted separately from other failures', () async {
+    await _insert(db, appId: 1, name: 'Offline');
+    await _insert(db, appId: 2, name: 'Broken');
+    final result = await HltbSyncService(
+      resolve: _ScriptedResolver({
+        'Offline': const SocketException('no route'),
+        'Broken': const HltbSearchException('status 500'),
+      }).call,
+      concurrency: 1,
+      sleep: (d) async {},
+    ).fetchAllTimeToBeat(db.gamesDao, await db.gamesDao.getAllGames(_steamId));
+    expect(result.failed, 2);
+    expect(result.networkFailed, 1);
+  });
+
+  test('sync notification names a missing connection', () {
+    final offline = SyncNotifier.buildSyncNotification(
+        0, (fetched: 0, noMatch: 0, failed: 3, networkFailed: 3, deferred: 2))!;
+    expect(offline, contains('No internet connection'));
+    expect(offline, contains('5 games'));
+
+    final mixed = SyncNotifier.buildSyncNotification(
+        0, (fetched: 0, noMatch: 0, failed: 3, networkFailed: 1, deferred: 0))!;
+    expect(mixed, isNot(contains('No internet')));
+    expect(mixed, contains('right now'));
   });
 
   test('selects only games that need data', () async {
@@ -226,10 +335,10 @@ void main() {
   test('sync notification mentions failed + deferred games as retried later', () {
     expect(
         SyncNotifier.buildSyncNotification(
-            0, (fetched: 3, noMatch: 1, failed: 0, deferred: 0)),
+            0, (fetched: 3, noMatch: 1, failed: 0, networkFailed: 0, deferred: 0)),
         isNull);
     final msg = SyncNotifier.buildSyncNotification(
-        2, (fetched: 0, noMatch: 0, failed: 1, deferred: 4))!;
+        2, (fetched: 0, noMatch: 0, failed: 1, networkFailed: 0, deferred: 4))!;
     expect(msg, contains('2 games automatically marked completed'));
     expect(msg, contains('5 games'));
     expect(msg, contains('retried on the next sync'));
