@@ -63,6 +63,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
 
   # Drift code generation — turns @DriftDatabase tables into type-safe Dart
   # classes. Run `dart run build_runner build` after editing a table file.
