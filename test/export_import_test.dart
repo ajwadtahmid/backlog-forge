@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:backlogforge/services/database/app_database.dart';
 import 'package:backlogforge/services/export_import_service.dart';
 import 'package:backlogforge/models/game_status.dart';
 
@@ -34,6 +37,7 @@ String _makeJson({
 ''';
 
 void main() {
+  exportTests();
   group('ExportImportService.parseImportJson', () {
     test('parses valid game fields correctly', () {
       final companions = ExportImportService.parseImportJson(
@@ -146,6 +150,101 @@ void main() {
       expect(g.playStyle.value, 'extended');
       expect(g.manualOverride.value, isTrue);
       expect(g.completedAt.value, DateTime.utc(2024, 4, 1, 8));
+    });
+  });
+}
+
+// ── Exports ──────────────────────────────────────────────────────────────────
+
+Game _exportGame({
+  String name = 'Game',
+  String? notes,
+  int? rating,
+  String? hltbName,
+  int minutes = 90,
+}) =>
+    Game(
+      id: 1,
+      steamId: 's',
+      appId: 10,
+      name: name,
+      playtimeMinutes: minutes,
+      essentialHours: 12.34,
+      extendedHours: null,
+      completionistHours: 80,
+      status: 'backlog',
+      addedAt: DateTime(2026, 1, 2),
+      manualOverride: false,
+      hltbName: hltbName,
+      notes: notes,
+      rating: rating,
+      hltbVerified: false,
+    );
+
+void exportTests() {
+  group('CSV export', () {
+    test('has a header and one row per game', () {
+      final csv = ExportImportService.buildExportCsv(
+          's', [_exportGame(name: 'A'), _exportGame(name: 'B')]);
+      final lines = csv.trim().split('\n');
+      expect(lines, hasLength(3));
+      expect(lines.first, startsWith('Name,Status,Playtime (h)'));
+    });
+
+    test('formats hours and leaves missing values empty', () {
+      final row = ExportImportService.buildExportCsv('s', [_exportGame()])
+          .trim()
+          .split('\n')
+          .last;
+      expect(row, startsWith('Game,backlog,1.50,,'));
+      expect(row, contains('12.3,,80.0'));
+    });
+
+    test('quotes commas, quotes and line breaks in names and notes', () {
+      final csv = ExportImportService.buildExportCsv('s', [
+        _exportGame(name: 'Hades, the "game"', notes: 'line1\nline2'),
+      ]);
+      expect(csv, contains('"Hades, the ""game"""'));
+      expect(csv, contains('"line1\nline2"'));
+    });
+  });
+
+  group('JSON export', () {
+    test('carries notes, rating and the backup owner', () {
+      final json = ExportImportService.buildExportJson(
+          's', [_exportGame(notes: 'n', rating: 8)]);
+      final data = jsonDecode(json) as Map<String, dynamic>;
+      expect(data['version'], 1);
+      expect(data['steamId'], 's');
+      final g = (data['games'] as List).single as Map<String, dynamic>;
+      expect(g['notes'], 'n');
+      expect(g['rating'], 8);
+      expect(g['completedAt'], isNull);
+    });
+
+    test('readBackupSteamId reads the owner and shrugs off bad input', () {
+      expect(ExportImportService.readBackupSteamId('{"steamId":"abc"}'), 'abc');
+      expect(ExportImportService.readBackupSteamId('{"games":[]}'), isNull);
+      expect(ExportImportService.readBackupSteamId('not json'), isNull);
+      expect(ExportImportService.readBackupSteamId('[1,2]'), isNull);
+    });
+
+    test('file names carry the date and the right extension', () {
+      expect(ExportImportService.buildFilename(),
+          matches(RegExp(r'^backlogforge_export_\d{8}\.json$')));
+      expect(ExportImportService.buildCsvFilename(),
+          matches(RegExp(r'^backlogforge_export_\d{8}\.csv$')));
+    });
+
+    test('parseImportBytes decodes UTF-8 with non-ASCII names', () {
+      final bytes = Uint8List.fromList(utf8.encode(jsonEncode({
+        'version': 1,
+        'games': [
+          {'appId': 1, 'name': 'Pokémon 日本語', 'addedAt': '2026-01-01T00:00:00.000'}
+        ],
+      })));
+      expect(ExportImportService.parseImportBytes(bytes).single.name.value,
+          'Pokémon 日本語');
     });
   });
 }

@@ -93,10 +93,3 @@ final completedSortedProvider = StreamProvider<List<Game>>((ref) {
   return ref.watch(databaseProvider).gamesDao.watchCompletedSorted(
       sortMode, steamId, extraFilter: extraFilter);
 });
-
-/// All games across every status — used by unified search.
-final allGamesProvider = StreamProvider<List<Game>>((ref) {
-  final steamId = ref.watch(authProvider).asData?.value.steamId;
-  if (steamId == null) return Stream.value([]);
-  return ref.watch(databaseProvider).gamesDao.watchAllGames(steamId);
-});

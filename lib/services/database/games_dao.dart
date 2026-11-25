@@ -32,13 +32,6 @@ class GamesDao extends DatabaseAccessor<AppDatabase> with _$GamesDaoMixin {
   Future<List<Game>> getAllGames(String steamId) =>
       (select(games)..where((g) => g.steamId.equals(steamId))).get();
 
-  /// Reactive stream of all games — used by the unified search.
-  Stream<List<Game>> watchAllGames(String steamId) =>
-      (select(games)
-            ..where((g) => g.steamId.equals(steamId))
-            ..orderBy([(g) => OrderingTerm(expression: g.name)]))
-          .watch();
-
   /// Backlog filter: active games (backlog or playing-without-completedAt).
   Expression<bool> _backlogFilter($GamesTable g, String steamId) =>
       g.steamId.equals(steamId) &
