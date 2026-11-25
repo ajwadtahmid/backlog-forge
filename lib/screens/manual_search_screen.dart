@@ -30,7 +30,7 @@ class _ManualSearchScreenState extends ConsumerState<ManualSearchScreen> {
     // Clear any results left over from a previous visit to this screen.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(searchProvider.notifier).clear();
-      _loadAddedGames();
+      unawaited(_loadAddedGames()); // logs its own failures
     });
   }
 
@@ -60,7 +60,7 @@ class _ManualSearchScreenState extends ConsumerState<ManualSearchScreen> {
   void _onSearchChanged(String query) {
     _debounce?.cancel();
     _debounce = Timer(AppConstants.kSearchDebounce, () {
-      ref.read(searchProvider.notifier).search(query);
+      unawaited(ref.read(searchProvider.notifier).search(query));
     });
   }
 

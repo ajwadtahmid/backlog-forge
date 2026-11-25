@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/database/games_dao.dart';
 import '../services/database/app_database.dart';
@@ -27,7 +28,7 @@ class _PrefsEnumNotifier<T extends Enum> extends Notifier<T> {
 
   void set(T value) {
     state = value;
-    ref.read(sharedPrefsProvider).setString(_key, value.name);
+    unawaited(ref.read(sharedPrefsProvider).setString(_key, value.name));
   }
 }
 

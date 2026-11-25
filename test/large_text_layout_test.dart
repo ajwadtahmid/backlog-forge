@@ -48,7 +48,7 @@ void main() {
   });
 
   testWidgets('time-to-beat chips stack at 2x text', (tester) async {
-    Widget chips() => HltbChipRow(chips: const [
+    Widget chips() => const HltbChipRow(chips: [
           HltbChip(label: 'Essential', hours: 10, color: Colors.red),
           HltbChip(label: 'Extended', hours: 20, color: Colors.green),
           HltbChip(label: 'Completionist', hours: 30, color: Colors.blue),

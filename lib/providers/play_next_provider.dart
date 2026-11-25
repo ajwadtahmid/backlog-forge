@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants.dart';
@@ -5,6 +6,7 @@ import '../services/database/app_database.dart';
 import '../models/game.dart';
 import 'database_provider.dart';
 import 'auth_provider.dart';
+import '../services/app_logger.dart';
 
 enum FindMethod {
   /// Weighted random: neglected and recently-played games score higher.
@@ -113,13 +115,13 @@ class PlayNextNotifier extends Notifier<PlayNextState> {
       spun: false,
     );
     // Homestretch auto-loads on selection — the tabs are the primary control.
-    if (method == FindMethod.focused) spin();
+    if (method == FindMethod.focused) unawaited(spin());
   }
 
   /// Switches the focused sub-view and immediately re-fetches picks.
   void setFocusedView(FocusedView view) {
     if (state.focusedView == view && state.spun) return;
-    _focusedSpin(targetView: view);
+    unawaited(_guarded(() => _focusedSpin(targetView: view)));
   }
 
   /// Updates the displayed threshold value immediately (no re-spin).
@@ -130,7 +132,7 @@ class PlayNextNotifier extends Notifier<PlayNextState> {
   /// Re-spins with the current threshold (called when the slider is released).
   void applyProgressThreshold() {
     if (state.spun && state.method == FindMethod.focused) {
-      _focusedSpin(targetView: state.focusedView);
+      unawaited(_guarded(() => _focusedSpin(targetView: state.focusedView)));
     }
   }
 
@@ -151,11 +153,21 @@ class PlayNextNotifier extends Notifier<PlayNextState> {
     state = state.copyWith(lockedIds: updated);
   }
 
-  Future<void> spin() async {
-    if (state.method == FindMethod.focused) {
-      await _focusedSpin();
-    } else {
-      await _shuffleSpin();
+  Future<void> spin() => _guarded(
+        () => state.method == FindMethod.focused
+            ? _focusedSpin()
+            : _shuffleSpin(),
+      );
+
+  /// Runs a lookup and, if the database read fails, logs it and clears the
+  /// loading flag. Without this the tab would show its skeleton forever and the
+  /// error would go unhandled.
+  Future<void> _guarded(Future<void> Function() run) async {
+    try {
+      await run();
+    } catch (e, st) {
+      AppLogger.instance.error('Play Next lookup failed', e, st);
+      state = state.copyWith(loading: false);
     }
   }
 

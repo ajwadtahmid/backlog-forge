@@ -173,21 +173,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   const SizedBox(height: 36),
 
                   // ── Feature highlights ───────────────────────────────────
-                  _FeatureBullet(
+                  const _FeatureBullet(
                     icon: Icons.timer_outlined,
                     title: 'See how long every game will take',
                     body: 'HowLongToBeat data is pulled automatically — '
                         'know if you\'re looking at 6 hours or 60.',
                   ),
                   const SizedBox(height: 12),
-                  _FeatureBullet(
+                  const _FeatureBullet(
                     icon: Icons.bolt_outlined,
                     title: 'Find what\'s almost done',
                     body: 'Homestretch mode surfaces games you\'re '
                         'already halfway through, so you can finally finish them.',
                   ),
                   const SizedBox(height: 12),
-                  _FeatureBullet(
+                  const _FeatureBullet(
                     icon: Icons.auto_awesome_outlined,
                     title: 'Auto-complete when you\'re done',
                     body: 'Once your playtime clears the finish line, '

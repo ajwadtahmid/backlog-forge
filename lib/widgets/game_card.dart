@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -44,7 +45,7 @@ class _GameCardState extends ConsumerState<GameCard> {
 
   Future<void> _setStatus(GameStatus next, {bool preserveCompletedAt = false}) async {
     try {
-      HapticFeedback.lightImpact();
+      unawaited(HapticFeedback.lightImpact());
       await ref.read(gameActionsProvider).setStatus(
         game, next, preserveCompletedAt: preserveCompletedAt,
       );

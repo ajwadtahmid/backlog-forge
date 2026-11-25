@@ -230,7 +230,7 @@ mixin GameListTabMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
     switch (action) {
       case _GameAction.openDetail:
         if (context.mounted) {
-          context.push('/library/game/${game.id}', extra: game);
+          unawaited(context.push<void>('/library/game/${game.id}', extra: game));
         }
       case _GameAction.markPlaying:
         await actions.setStatus(game, GameStatus.playing,
@@ -431,7 +431,7 @@ mixin GameListTabMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                                 return KeyEventResult.ignored;
                               }
                               if (event.logicalKey == LogicalKeyboardKey.delete) {
-                                _onKeyDelete(game);
+                                unawaited(_onKeyDelete(game));
                                 return KeyEventResult.handled;
                               }
                               return KeyEventResult.ignored;

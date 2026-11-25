@@ -376,17 +376,17 @@ class GamesDao extends DatabaseAccessor<AppDatabase> with _$GamesDaoMixin {
       case LengthFilter.any:
         return const CustomExpression<bool>('1');
       case LengthFilter.short:
-        return CustomExpression<bool>(
+        return const CustomExpression<bool>(
           "COALESCE(essential_hours, extended_hours, completionist_hours) IS NOT NULL"
           " AND COALESCE(essential_hours, extended_hours, completionist_hours) < ${AppConstants.kShortGameHours}",
         );
       case LengthFilter.medium:
-        return CustomExpression<bool>(
+        return const CustomExpression<bool>(
           "COALESCE(essential_hours, extended_hours, completionist_hours) >= ${AppConstants.kShortGameHours}"
           " AND COALESCE(essential_hours, extended_hours, completionist_hours) < ${AppConstants.kMediumGameHours}",
         );
       case LengthFilter.long:
-        return CustomExpression<bool>(
+        return const CustomExpression<bool>(
           "COALESCE(essential_hours, extended_hours, completionist_hours) >= ${AppConstants.kMediumGameHours}",
         );
       case LengthFilter.noData:

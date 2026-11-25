@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../constants.dart';
@@ -344,9 +345,9 @@ class _DailyBudgetCard extends ConsumerWidget {
                   final snapped =
                       (v / AppConstants.kBudgetStep).round() *
                       AppConstants.kBudgetStep;
-                  notifier.setBudget(
+                  unawaited(notifier.setBudget(
                     double.parse(snapped.toStringAsFixed(1)),
-                  );
+                  ));
                 },
               ),
             ),

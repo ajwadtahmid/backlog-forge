@@ -37,7 +37,7 @@ class AppLogger with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      _flush();
+      _flush().ignore();
     }
   }
 

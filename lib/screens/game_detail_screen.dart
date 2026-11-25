@@ -411,7 +411,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       children: [
         Row(
           children: [
-            SectionLabel('Playtime'),
+            const SectionLabel('Playtime'),
             const Spacer(),
             if (game.appId > 0)
               IconButton(
@@ -538,21 +538,21 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionLabel('Status'),
+        const SectionLabel('Status'),
         const SizedBox(height: 12),
         ToggleRow<GameStatus>(
           options: [
-            ToggleOption(
+            const ToggleOption(
               value: GameStatus.backlog,
               label: 'Backlog',
               icon: Icons.inbox_outlined,
             ),
-            ToggleOption(
+            const ToggleOption(
               value: GameStatus.playing,
               label: 'Playing',
               icon: Icons.play_circle_outline,
             ),
-            ToggleOption(
+            const ToggleOption(
               value: GameStatus.completed,
               label: 'Completed',
               icon: Icons.check_circle_outline,
@@ -569,7 +569,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionLabel('Play Style'),
+        const SectionLabel('Play Style'),
         const SizedBox(height: 12),
         ToggleRow<PlayStyle>(
           options: [
@@ -608,7 +608,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionLabel('Progress'),
+        const SectionLabel('Progress'),
         const SizedBox(height: 12),
         if (progress != null) ...[
           ClipRRect(
@@ -735,7 +735,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
       children: [
         Row(
           children: [
-            SectionLabel('Notes'),
+            const SectionLabel('Notes'),
             const Spacer(),
             EditIconButton(
               tooltip: 'Edit notes',

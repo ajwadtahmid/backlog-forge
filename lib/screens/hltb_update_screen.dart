@@ -34,7 +34,7 @@ class _HltbUpdateScreenState extends ConsumerState<HltbUpdateScreen> {
     // Show the game's real name; search with the cleaned-up form of it.
     _searchController = TextEditingController(text: widget.game.name);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(searchProvider.notifier).search(query);
+      unawaited(ref.read(searchProvider.notifier).search(query));
     });
   }
 
@@ -48,7 +48,7 @@ class _HltbUpdateScreenState extends ConsumerState<HltbUpdateScreen> {
   void _onSearchChanged(String query) {
     _debounce?.cancel();
     _debounce = Timer(AppConstants.kSearchDebounce, () {
-      ref.read(searchProvider.notifier).search(query);
+      unawaited(ref.read(searchProvider.notifier).search(query));
     });
   }
 

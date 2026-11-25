@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
@@ -29,7 +30,7 @@ class ThemeNotifier extends Notifier<ThemeMode> {
     if (raw == null) {
       // No cached value yet — sync from DB after auth resolves.
       // New installs start dark; the DB row (default 'dark') confirms it.
-      Future.microtask(_syncFromDb);
+      unawaited(Future.microtask(_syncFromDb)); // handles its own errors
       return ThemeMode.dark;
     }
     return _decode(raw);

@@ -180,7 +180,8 @@ final backgroundSyncProvider = Provider<void>((ref) {
     final auth = ref.read(authProvider).asData?.value;
     if (auth == null || auth.steamId == AuthNotifier.guestSteamId) return;
     if (ref.read(syncStateProvider).status == SyncStatus.syncing) return;
-    ref.read(syncStateProvider.notifier).sync();
+    // sync() reports its own failures through the sync state.
+    unawaited(ref.read(syncStateProvider.notifier).sync());
   });
   ref.onDispose(timer.cancel);
 });

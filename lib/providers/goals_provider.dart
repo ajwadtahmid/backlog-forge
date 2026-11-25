@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme_provider.dart'; // for sharedPrefsProvider
 
@@ -10,9 +11,9 @@ class QuarterGoalNotifier extends Notifier<int?> {
   void setGoal(int? goal) {
     state = goal;
     if (goal == null) {
-      ref.read(sharedPrefsProvider).remove(_kQuarterGoalKey);
+      unawaited(ref.read(sharedPrefsProvider).remove(_kQuarterGoalKey));
     } else {
-      ref.read(sharedPrefsProvider).setInt(_kQuarterGoalKey, goal);
+      unawaited(ref.read(sharedPrefsProvider).setInt(_kQuarterGoalKey, goal));
     }
   }
 }

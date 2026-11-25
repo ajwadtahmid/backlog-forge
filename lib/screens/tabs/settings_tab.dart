@@ -51,7 +51,7 @@ class SettingsTab extends ConsumerWidget {
                 ),
                 trailing: isGuest
                     ? FilledButton(
-                        onPressed: () => showModalBottomSheet(
+                        onPressed: () => showModalBottomSheet<void>(
                           context: context,
                           builder: (_) => const SignInSheet(),
                         ),
