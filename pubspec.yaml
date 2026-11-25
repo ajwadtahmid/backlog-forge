@@ -2,7 +2,7 @@ name: backlogforge
 description: "Steam game backlog manager — track, prioritise, and conquer your backlog."
 publish_to: "none"
 
-version: 1.2.0+8
+version: 1.2.0+10
 
 environment:
   # Flutter 3.50 ships Dart 3.14. Material comes from the material_ui package
