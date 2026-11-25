@@ -77,7 +77,7 @@ Designed for PC gamers who own large Steam libraries and want a structured, low-
 
 - **Guest & Offline Mode** — No Steam account required. Use the app in guest mode and add games manually. All data is stored locally in SQLite with no cloud sync.
 
-- **Per-Game Notes & Ratings** — Add personal notes and a 1–10 rating to any game. Export and import your full library (including notes and ratings) for backup or device transfer.
+- **Per-Game Notes & Ratings** — Add personal notes and a 1–10 rating to any game. Export and import your full library (including notes and ratings) for backup or device transfer. Importing merges into the games you already have instead of replacing them, so your local notes and ratings are kept.
 
 ---
 
@@ -108,9 +108,12 @@ Designed for PC gamers who own large Steam libraries and want a structured, low-
 - **Sort & search** — sort by playtime, HLTB estimate, alphabetically, or last played; full-text search
 - **Manual game search** — add titles that are not in your Steam library
 - **Background sync** — automatically re-syncs your library every 2 hours while the app is open
-- **Export & import** — back up your full library (including notes, ratings, and manual games) as JSON
-- **Import dry-run preview** — see exactly which games will be added or updated before confirming
-- **Dark and light theme** — persisted across sessions
+- **Export & import** — back up your full library (including notes, ratings, and manual games) as JSON, or export a CSV for a spreadsheet
+- **Merge on import** — games already in your library are updated in place; notes, ratings, status overrides and dates are kept unless the backup has its own value, and out-of-range values in a file are ignored
+- **Import dry-run preview** — see exactly which games will be added or merged before confirming
+- **Dark by default** — new installs start in the dark theme; switch to light or follow the system in Settings, and the choice is remembered
+- **Fonts** — Space Grotesk, Inter or JetBrains Mono (all bundled with the app), or the system font, chosen in Settings → Appearance
+- **Large text and wide screens** — layouts adapt to a large system font size, to landscape, and to tablets and desktop windows
 - **Offline-first** — all data stored locally in SQLite; no cloud sync required
 
 ---
@@ -188,6 +191,10 @@ openssl rand -hex 32
 ```
 
 Then set `BACKEND_URL` and `CLIENT_TOKEN` in `.env` and regenerate as above.
+
+### Releases
+
+Pushing a tag of the form `vX.Y.Z` (for example `v1.2.0`) starts the release workflow: it runs `flutter analyze` and `flutter test`, and only if both pass builds the Android bundle, the Windows installer and the Linux AppImage. Tags with anything else in them (`v1.2.0-rc1`, `vtest`) do nothing, and there is no check on ordinary pushes or pull requests, so run `flutter analyze` and `flutter test` (see Testing below) before tagging.
 
 ### Testing
 
@@ -271,6 +278,7 @@ Yes. Use the manual search to find any game on HowLongToBeat and add it to your 
 - **HowLongToBeat limits** — lookups run from your device and need access to howlongtobeat.com. If HLTB rate-limits you mid-sync, the remaining games are retried on the next sync rather than skipped
 - **Background sync** — the 2-hour background sync only runs while the app is open; playtime changes when the app is closed are picked up on the next manual or automatic sync
 - **Playtime source** — playtime is sourced from Steam and may differ slightly from in-game clocks
+- **Importing a backup** — a game's notes in the file replace the notes you have locally for that game (blank notes never erase yours), so importing an old backup over newer notes can overwrite them
 
 ---
 
