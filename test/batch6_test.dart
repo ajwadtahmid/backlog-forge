@@ -160,8 +160,13 @@ void main() {
     late AppDatabase db;
     late int id;
 
-    Future<void> open(WidgetTester tester) async {
+    Future<void> open(WidgetTester tester,
+        {String signedInAs = _steamId, int? appId}) async {
       SharedPreferences.setMockInitialValues({});
+      if (appId != null) {
+        await (db.update(db.games)..where((g) => g.id.equals(id)))
+            .write(GamesCompanion(appId: Value(appId)));
+      }
       final prefs = await SharedPreferences.getInstance();
       final game = await (db.select(db.games)..where((g) => g.id.equals(id)))
           .getSingle();
@@ -169,7 +174,7 @@ void main() {
         overrides: [
           databaseProvider.overrideWithValue(db),
           sharedPrefsProvider.overrideWithValue(prefs),
-          authProvider.overrideWith(() => _FakeAuth()),
+          authProvider.overrideWith(() => _FakeAuth(signedInAs)),
         ],
         child: MaterialApp(home: GameDetailScreen(game: game)),
       ));
@@ -194,6 +199,28 @@ void main() {
           ));
     });
     tearDown(() => db.close());
+
+    group('Sync from Steam button', () {
+      Future<void> check(WidgetTester tester,
+          {required String as, required int appId, required bool shown}) async {
+        await open(tester, signedInAs: as, appId: appId);
+        expect(find.byTooltip('Sync from Steam'),
+            shown ? findsOneWidget : findsNothing);
+        await unmount(tester);
+      }
+
+      testWidgets('is hidden for a guest, even on a Steam game', (tester) async {
+        await check(tester, as: 'guest_user', appId: 620, shown: false);
+      });
+
+      testWidgets('is shown to a signed-in user on a Steam game', (tester) async {
+        await check(tester, as: _steamId, appId: 620, shown: true);
+      });
+
+      testWidgets('is hidden for a hand-added game', (tester) async {
+        await check(tester, as: _steamId, appId: -3, shown: false);
+      });
+    });
 
     testWidgets('a status change made elsewhere shows up on the open screen',
         (tester) async {
@@ -258,6 +285,9 @@ void main() {
 }
 
 class _FakeAuth extends AuthNotifier {
+  _FakeAuth([this.id = _steamId]);
+  final String id;
+
   @override
-  Future<AuthState> build() async => const AuthState.signedIn(_steamId);
+  Future<AuthState> build() async => AuthState.signedIn(id);
 }

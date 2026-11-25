@@ -172,6 +172,16 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     }
   }
 
+  /// Whether playtime can be pulled from Steam: only for a Steam game and only
+  /// when signed in with a real Steam account. A guest has no Steam ID, so the
+  /// request could only fail ("Failed to sync playtime from Steam").
+  bool _canSyncPlaytime(Game game) {
+    final steamId = ref.watch(authProvider).asData?.value.steamId;
+    return game.appId > 0 &&
+        steamId != null &&
+        steamId != AuthNotifier.guestSteamId;
+  }
+
   Future<void> _syncPlaytimeFromSteam(Game game) async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -179,7 +189,11 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
     try {
       final auth = await ref.read(authProvider.future);
       final steamId = auth.steamId;
-      if (steamId == null || game.appId <= 0) return;
+      if (steamId == null ||
+          steamId == AuthNotifier.guestSteamId ||
+          game.appId <= 0) {
+        return;
+      }
 
       final playtimeMinutes = await SteamService().getGamePlaytime(
         steamId,
@@ -413,7 +427,7 @@ class _GameDetailScreenState extends ConsumerState<GameDetailScreen> {
           children: [
             const SectionLabel('Playtime'),
             const Spacer(),
-            if (game.appId > 0)
+            if (_canSyncPlaytime(game))
               IconButton(
                 icon: Icon(Icons.sync, size: 18, color: colors.primary),
                 tooltip: 'Sync from Steam',
