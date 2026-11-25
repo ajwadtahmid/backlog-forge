@@ -22,6 +22,7 @@
     <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-green" />
   </a>
   <img alt="Android" src="https://img.shields.io/badge/Android-supported-brightgreen?logo=android&logoColor=white" />
+  <img alt="iOS" src="https://img.shields.io/badge/iOS-supported-brightgreen?logo=apple&logoColor=white" />
   <img alt="Windows" src="https://img.shields.io/badge/Windows-supported-brightgreen?logo=windows11&logoColor=white" />
   <img alt="Linux" src="https://img.shields.io/badge/Linux-supported-brightgreen?logo=linux&logoColor=white" />
 </p>
@@ -36,7 +37,7 @@
 <a href="https://play.google.com/store/apps/details?id=com.ajwadtahmid.backlogforge">
 <img src="assets/images/get-it-on-play-store.png" alt="Get it on Google Play" align="center" height="54" /></a>
 
-<a href="https://apps.apple.com/app/id">
+<a href="https://apps.apple.com/app/id6800064079">
 <img src="assets/images/get-it-on-app-store.png" alt="Get it on App Store" align="center" height="54" /></a>
 
 </div>
@@ -119,6 +120,18 @@ Designed for PC gamers who own large Steam libraries and want a structured, low-
 
 ---
 
+## Downloads
+
+| Platform | Where to get it |
+|----------|-----------------|
+| Android | [Google Play](https://play.google.com/store/apps/details?id=com.ajwadtahmid.backlogforge) |
+| iPhone and iPad | [App Store](https://apps.apple.com/gh/app/backlogforge/id6800064079) |
+| Windows (installer) and Linux (AppImage) | [GitHub Releases](https://github.com/ajwadtahmid/backlog-forge/releases) |
+
+The Android app is distributed through Google Play only; the GitHub releases carry the Windows and Linux builds.
+
+---
+
 ## Development
 
 ### Requirements
@@ -195,7 +208,7 @@ Then set `BACKEND_URL` and `CLIENT_TOKEN` in `.env` and regenerate as above.
 
 ### Releases
 
-Pushing a tag of the form `vX.Y.Z` (for example `v1.2.0`) starts the release workflow: it runs `flutter analyze` and `flutter test`, and only if both pass builds the Android bundle, the Windows installer and the Linux AppImage. Tags with anything else in them (`v1.2.0-rc1`, `vtest`) do nothing, and there is no check on ordinary pushes or pull requests, so run `flutter analyze` and `flutter test` (see Testing below) before tagging.
+Pushing a tag of the form `vX.Y.Z` (for example `v1.2.0`) starts the release workflow: it runs `flutter analyze` and `flutter test`, and only if both pass builds the Android bundle, the Windows installer and the Linux AppImage (it does not build the iOS app). Tags with anything else in them (`v1.2.0-rc1`, `vtest`) do nothing, and there is no check on ordinary pushes or pull requests, so run `flutter analyze` and `flutter test` (see Testing below) before tagging.
 
 ### Testing
 
@@ -263,7 +276,7 @@ No. All data — games, notes, ratings, settings — is stored locally in a SQLi
 BacklogForge compares your Steam playtime against the HowLongToBeat estimate for your chosen play style (Essential, Extended, or Completionist). When your playtime meets or exceeds the target, the game is automatically marked as completed.
 
 **Q: What platforms are supported?**
-Android, Windows, and Linux.
+Android, iOS, Windows, and Linux.
 
 **Q: Can I use it for non-Steam games?**
 Yes. Use the manual search to find any game on HowLongToBeat and add it to your library.
