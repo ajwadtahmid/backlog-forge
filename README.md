@@ -105,7 +105,8 @@ Designed for PC gamers who own large Steam libraries and want a structured, low-
 - **Library statistics** — completion grade (A+ → D-), hours to clear backlog, avg. finish time, velocity chart
 - **Daily budget calculator** — set hours per day and see when your backlog clears
 - **Length filter** — filter backlog by game length (Short / Medium / Long / No Data)
-- **Sort & search** — sort by playtime, HLTB estimate, alphabetically, or last played; full-text search
+- **Sort & search** — sort the backlog by name, progress, shortest or longest time left, unplayed (oldest added first) or rating, and the completed list by name, progress, length or rating; search ignores case, punctuation and spacing ("witcher3" finds "The Witcher 3")
+- **Rated and notes filters** — show only rated games or games with notes
 - **Manual game search** — add titles that are not in your Steam library
 - **Background sync** — automatically re-syncs your library every 2 hours while the app is open
 - **Export & import** — back up your full library (including notes, ratings, and manual games) as JSON, or export a CSV for a spreadsheet
